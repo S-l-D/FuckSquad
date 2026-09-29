@@ -1,0 +1,37 @@
+# Артефакты сборки C++ и CMake
+build/
+.cmake/
+CMakeUserPresets.json
+*.user
+*.suo
+*.userosscache
+*.sln
+*.vcxproj
+*.filters
+
+# Кэш компилятора Clang / статических анализаторов
+.clang-tidy
+.clang-format
+.cache/
+
+# Артефакты сборки Rust (Cargo)
+# Игнорируем всю папку сборки, кэша и зависимостей Rust
+GUI/target/
+GUI/Cargo.lock
+
+# Временные файлы сред разработки (IDEs)
+# JetBrains (CLion / IDEA)
+.idea/
+cmake-build-*/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+ipch/
+*.VC.db
+*.VC.opendb
+
+# Системный мусор и логи
+*.log
+.DS_Store
+Thumbs.db
