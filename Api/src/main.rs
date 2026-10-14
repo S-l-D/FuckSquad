@@ -2,21 +2,17 @@ use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 
 use crate::service::app_config;
+use crate::infra::server_config::ServerConfig;
 
-#[derive(Debug, Clone)]
-struct ServerConfig {
-    pub host: String,
-    pub port: u32,
-}
-
-pub mod service;
+mod service;
+mod infra;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let server = ServerConfig {
-        host: "127.0.0.1".to_string(),
-        port: 8080,
-    };
+    dotenvy::dotenv().ok();
+    let server = ServerConfig::load_or_default();
+
+    println!("Starting server with config: {:#?}", server);
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -27,17 +23,10 @@ async fn main() -> std::io::Result<()> {
 
 
         App::new()
-            // .app_data(Data::new(AppData::new(
-            //     Option::from(pool.clone()),
-            //     config.clone(),
-            //     env!("CARGO_PKG_NAME").to_string(),
-            //     env!("CARGO_PKG_VERSION").to_string(),
-            // )))
-            // .wrap(common::log::log())
-            // .wrap(auth)
             .wrap(cors)
             .configure(app_config)
     })
+        .workers(server.workers as usize)
     .bind(format!("{}:{}", server.host, server.port))?
     .run()
     .await?;
