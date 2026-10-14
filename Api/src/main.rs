@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 
 use crate::service::app_config;
@@ -17,12 +18,13 @@ async fn main() -> std::io::Result<()> {
         port: 8080,
     };
 
-    let server_clone = server.clone();
     HttpServer::new(move || {
-        // let auth = common::security::GrantsMiddleware::with_extractor(common::auth::extract);
-        // let cors = Cors::permissive();
+        let cors = Cors::default()
+            .allow_any_origin()
+            .send_wildcard()
+            .allow_any_method()
+            .allow_any_header();
 
-        println!("Starting server on {:#?}", server_clone);
 
         App::new()
             // .app_data(Data::new(AppData::new(
@@ -31,11 +33,9 @@ async fn main() -> std::io::Result<()> {
             //     env!("CARGO_PKG_NAME").to_string(),
             //     env!("CARGO_PKG_VERSION").to_string(),
             // )))
-            // .app_data(Data::new(actix_web::web::PayloadConfig::new(1 << 30)))
-            // .app_data(common::config::json_config())
             // .wrap(common::log::log())
             // .wrap(auth)
-            // .wrap(cors)
+            .wrap(cors)
             .configure(app_config)
     })
     .bind(format!("{}:{}", server.host, server.port))?

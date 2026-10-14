@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 actix-web = "4"
+actix-cors = "0.7"
 
 # date and time
 chrono = { version = "0.4", features = ["serde"] }
