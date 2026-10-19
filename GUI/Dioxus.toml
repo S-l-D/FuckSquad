@@ -1,0 +1,8 @@
+[application]
+name = "chip-viewer"
+
+[web.app]
+title = "Chip Layout Viewer"
+
+[[web.proxy]]
+backend = "http://127.0.0.1:3001/api/"
