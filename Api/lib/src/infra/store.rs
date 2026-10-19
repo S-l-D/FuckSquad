@@ -3,7 +3,7 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
-const BASE_URL: &str = "https://172.17.0.1:8080";
+const BASE_URL: &str = "http://172.17.0.1:8080";
 
 async fn get_response(req: &Request) -> Result<String, String> {
     let resp = execute_req(&req).await?;

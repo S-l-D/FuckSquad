@@ -20,6 +20,6 @@ pub async fn read_file(
 ) -> Result<Layout, String> {
      println!("Reading file: {}", path);
      get(
-          format!("data/{}", path).as_str(),
+          format!("layout/file/{}", path).as_str(),
      ).await
 }
