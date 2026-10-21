@@ -1,6 +1,8 @@
 mod components;
 // mod model;
 
+use std::fs::OpenOptions;
+use std::io::Read;
 use components::canvas::ChipCanvas;
 use components::inspector::Inspector;
 use dioxus::prelude::*;
@@ -12,7 +14,7 @@ fn main() {
 }
 
 async fn fetch_layout() -> Result<Layout, String> {
-    tetrislib::store::read_file("any".to_string()).await
+    tetrislib::store::read_file("layout.json".to_string()).await
 }
 
 #[component]
