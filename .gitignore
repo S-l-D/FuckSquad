@@ -9,6 +9,8 @@ CMakeUserPresets.json
 *.vcxproj
 *.filters
 
+doc/
+
 # Кэш компилятора Clang / статических анализаторов
 .clang-tidy
 .clang-format

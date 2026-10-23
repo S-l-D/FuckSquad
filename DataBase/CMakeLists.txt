@@ -1,10 +1,18 @@
 # Создаем статическую C++ библиотеку для работы с БД
 add_library(DataBase STATIC "")
 
-# Сюда разработчики запишут исходники (например: SqliteWrapper.cpp)
-target_sources(DataBase PRIVATE
-    # DatabaseStub.cpp
+target_sources(DataBase
+    PRIVATE
+        DataBase.cpp
+    PUBLIC
+        FILE_SET HEADERS
+        BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}"
+        FILES
+            DataBase.h
 )
 
-# Позволяет писать #include "MyHeader.h" внутри папки и из других модулей
-target_include_directories(DataBase PUBLIC .)
+target_include_directories(DataBase
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:include>
+)
