@@ -119,6 +119,13 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
         throw std::runtime_error("Parser error: Blockage '" + id_str +
                                  "' has non-positive dimensions.");
       }
+
+      if (blk.x < 0 || blk.y < 0 || blk.x + blk.width > db.design.chip_width ||
+          blk.y + blk.height > db.design.chip_height) {
+        throw std::runtime_error("Parser error: Blockage '" + id_str +
+                                 "' is out of chip bounds.");
+      }
+
       db.addCell(id_str, std::move(blk));
     }
   }
@@ -137,6 +144,12 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
       pad.type =
           static_cast<int16_t>(pad_dict_id | TypeFlags::KIND_IO_PAD |
                                TypeFlags::IS_FIXED | TypeFlags::IS_PLACED);
+
+      if (pad.x < 0 || pad.y < 0 || pad.x + pad.width > db.design.chip_width ||
+          pad.y + pad.height > db.design.chip_height) {
+        throw std::runtime_error("Parser error: Pad '" + id_str +
+                                 "' is out of chip bounds.");
+      }
 
       db.addCell(id_str, std::move(pad));
     }
