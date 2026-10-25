@@ -4,6 +4,8 @@ use actix_web::{App, HttpServer};
 use crate::service::app_config;
 use crate::infra::server_config::ServerConfig;
 
+mod dao;
+mod entity;
 mod logic;
 mod service;
 mod infra;
