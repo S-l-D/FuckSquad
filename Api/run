@@ -1,0 +1,116 @@
+#!/bin/bash
+
+#Конфигурация - изменяемые параметры
+moduleName='tetrisapi'
+moduleVersion='24.01'
+pubPort='8080'
+
+# DATABASE.SCHEMA=postgres
+# DATABASE.USER=postgres
+# DATABASE.PASSWORD=postgres
+# DATABASE.HOST=172.17.0.1
+# DATABASE.PORT=5432
+# DATABASE.DBNAME=user
+
+# Возможные параметры запуска
+#         - Без параметров - стандартно для разработки - очистка, очистка логов, сборка, локальный запуск
+#           тоже что запустить ./run -c -cl -b -l
+# -b      - Сборка *. war артефакта и docker образа
+# -upg    - Выполнение новых скриптов postgresql
+# -c      - удаление docker container и image
+# -cl     - Удаление логов проекта
+# -cmr    - Удаление кеша сохранённых maven артефактов
+# -l      - запуск с локальной конфигурацией(для разработки или тестового сервера)
+# -s      - серверная конфигурация (au или prod)
+# -dru    - push образа docker в nexus-сервер
+
+#Статические настройки(маловероятно что нужно будет менять)
+storageRoot='/home/data'
+configRoot='/home/config'
+logRoot="/home/logs/${moduleName}/"
+pubIp='172.17.0.1'
+pgupdpath='resources/updates'
+dotenv='./.env'
+
+#Вычисляемые значения
+releaseId=$(date +'%y').$(date +'%m')
+storagePath="${storageRoot}/${moduleName}"
+configPath="${configRoot}/${moduleName}"
+moduleId="${moduleName}-${moduleVersion}"
+imageId="fuckSquad/${moduleName}:${moduleVersion}"
+
+#Константы
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+LGREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+function localrun {
+    echo -e "${LGREEN}$(date +"%Y-%m-%d %T") running container ${moduleName} (development config)${NC}"
+    docker run -dit \
+        --network host \
+        --name $moduleName \
+        --restart unless-stopped \
+        -v $storagePath:/data \
+        -v $logRoot:/logs \
+        -v $configPath:/cfg \
+        $imageId
+}
+
+function cargoupdate {
+    cd lib
+    cargo update
+    cd ..
+    cargo update
+}
+
+function build {
+    echo -e "${LGREEN}$(date +"%Y-%m-%d %T") cargo build --release ${moduleId}${NC}"
+    cargo build --release
+    echo -e "${LGREEN}$(date +"%Y-%m-%d %T") building image ${imageId}${NC}"
+    docker build -t $imageId .
+}
+
+function clear {
+    echo -e "${LGREEN} $(date +"%Y-%m-%d %T") stopping container ${moduleName} ${NC} ${NC} "
+    docker container stop ${moduleName}
+    echo -e "${LGREEN}$(date +"%Y-%m-%d %T") removing container ${moduleName}${NC}"
+    docker container rm ${moduleName}
+    echo -e "${LGREEN}$(date +"%Y-%m-%d %T") removing image ${imageId}${NC}"
+    docker image rm ${imageId}
+}
+
+if [ $# -eq 0 ]
+  then
+    clear
+    build
+    localrun
+fi
+
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    -b)
+        build
+        shift
+    ;;
+    -c)
+        clear
+        shift
+    ;;
+    -cup)
+        cargoupdate
+        shift
+    ;;
+esac
+done
+set -- "${POSITIONAL[@]}"
+
+end=`date +%s`
+runtime=$((end-start))
+
+echo -e "${LGREEN}$(date +"%Y-%m-%d %T") Total time: ${YELLOW}" $runtime "${LGREEN} seconds ${NC}"

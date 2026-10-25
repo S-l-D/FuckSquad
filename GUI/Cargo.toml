@@ -1,14 +1,17 @@
 [package]
-name = "tetric_gui"
+name = "chip-viewer"
 version = "0.1.0"
-edition = "2026"
-
-[lib]
-# Указываем, что собираем статическую библиотеку для вызова из C++
-crate-type = ["staticlib"] 
+edition = "2021"
 
 [dependencies]
-# Сюда UI-крейты (egui, slint, iced и т.д.)
+dioxus = { version = "=0.7.9" }
+serde = { version = "1", features = ["derive"] }
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+web-sys = { version = "0.3", features = ["Window", "Location"] }
+#tetrislib = { git = "https://github.com/S-l-D/FuckSquad.git", branch = "web" }
+tetrislib = { path = "../Api/lib" }
 
-
-# Не большой специалист по Rust но надеюсь что то адекватное написал
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
