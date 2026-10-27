@@ -16,6 +16,7 @@ pub fn init_routes(config: &mut web::ServiceConfig) {
             .service(create)
             .service(update)
             .service(delete)
+            .service(all)
             .service(get)
     );
 }
@@ -70,6 +71,19 @@ pub async fn delete(
                 StatusMessage::make_internal_server_error_message("")
             })??;
     Ok(HttpResponse::Ok().json(res.to_response()))
+}
+
+#[get("/all")]
+pub async fn all(
+    app_data: web::Data<AppData>,
+) -> Result<HttpResponse, StatusMessage> {
+    let res = web::block(move || ProjectLogic::all(app_data))
+        .await
+        .map_err(|e| {
+            eprintln!("{e:?}");
+            StatusMessage::make_internal_server_error_message("")
+        })??;
+    Ok(HttpResponse::Ok().json(res))
 }
 
 #[get("/{id}")]

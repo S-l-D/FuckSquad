@@ -38,6 +38,7 @@ impl Project {
             id: self.uuid.clone(),
             name: self.name.clone(),
             description: self.description.clone(),
+            solutions: Vec::new(),
         }
     }
 
