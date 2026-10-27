@@ -4,16 +4,54 @@ use crate::entity::project::Project;
 use crate::entity::solution::Solution;
 use actix_web::web;
 use common::config::app_data::AppData;
-use common::logic::LogicTrait;
 use common::model::status_message::StatusMessage;
 use std::collections::HashMap;
+use common::dao::DaoTrait;
 use tetrislib::dto::project_response::ProjectResponse;
 use tetrislib::dto::solution_response::SolutionResponse;
 use uuid::Uuid;
 
 pub struct ProjectLogic {}
 
-impl LogicTrait<Project, ProjectDao> for ProjectLogic {}
+impl ProjectLogic {
+    pub fn create(app_data: web::Data<AppData>, entity: Project) -> Result<Project, StatusMessage> {
+        let conn = app_data.conn();
+        ProjectDao::create(conn, entity, Uuid::nil())
+            .map_err(|e| {
+                eprintln!("{e}");
+                StatusMessage::make_internal_server_error_message(format!("Create entity error!").as_str())
+            })
+    }
+    
+    pub fn update(app_data: web::Data<AppData>, entity: Project) -> Result<Project, StatusMessage> {
+        let conn = app_data.conn();
+        ProjectDao::update(conn, entity, Uuid::nil())
+            .map_err(|e| {
+                eprintln!("{e}");
+                StatusMessage::make_internal_server_error_message(format!("Update entity error!").as_str())
+            })
+    }
+    pub fn delete(app_data: web::Data<AppData>, id: Uuid) -> Result<Project, StatusMessage> {
+        let conn = app_data.conn();
+        ProjectDao::delete(conn, id, Uuid::nil())
+            .map_err(|e| {
+                eprintln!("{e}");
+                StatusMessage::make_internal_server_error_message(format!("Delete entity error!").as_str())
+            })
+    }
+
+    pub fn find(app_data: web::Data<AppData>, id: Uuid) -> Result<Project, StatusMessage> {
+        let conn = app_data.conn();
+        ProjectDao::find(conn, id)
+            .map_err(|e| {
+                eprintln!("{e}");
+                if e.as_db_error() == None {
+                    return StatusMessage::constructor("540", "Project not found in database")
+                }
+                StatusMessage::make_internal_server_error_message(format!("Find entity error!").as_str())
+            })
+    }
+}
 
 impl ProjectLogic {
     pub fn all(app_data: web::Data<AppData>) -> Result<Vec<ProjectResponse>, StatusMessage> {

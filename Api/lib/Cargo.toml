@@ -10,6 +10,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+uuid = { version = "1", features = ["js"] }
 wasm-bindgen = { version = "0.2" }
 wasm-bindgen-futures = { version = "0.4" }
 

@@ -3,11 +3,10 @@ mod components;
 
 use components::canvas::ChipCanvas;
 use components::inspector::Inspector;
+use components::projects::ProjectsPanel;
 use dioxus::prelude::*;
-use std::fs::OpenOptions;
-use std::io::Read;
 use tetrislib::dto::model;
-use tetrislib::dto::model::{Blockage, Cell, Design, Layout, Net, PadLocation, Row, TetrisParams};
+use tetrislib::dto::model::Layout;
 
 fn main() {
     dioxus::launch(App);
@@ -38,27 +37,32 @@ fn App() -> Element {
                     "Обновить данные"
                 }
             }
-            match state {
-                None => rsx! {
-                    div { class: "notice", "Загрузка схемы..." }
-                },
-                Some(Err(message)) => rsx! {
-                    div { class: "notice error",
-                        h2 { "Ошибка загрузки" }
-                        p { "{message}" }
-                        p { "Убедись, что запущен backend на порту 3001 и настроен proxy в Dioxus.toml." }
+            div { class: "app-body",
+                ProjectsPanel {}
+                div { class: "layout-content",
+                    match state {
+                        None => rsx! {
+                            div { class: "notice", "Загрузка схемы..." }
+                        },
+                        Some(Err(message)) => rsx! {
+                            div { class: "notice error",
+                                h2 { "Ошибка загрузки" }
+                                p { "{message}" }
+                                p { "Убедись, что запущен backend на порту 3001 и настроен proxy в Dioxus.toml." }
+                            }
+                        },
+                        Some(Ok(layout)) => rsx! {
+                            main { class: "workspace",
+                                ChipCanvas {
+                                    layout: layout.clone(),
+                                    selected_id: selected_id(),
+                                    on_select: move |id| selected_id.set(Some(id)),
+                                }
+                                Inspector { layout, selected_id: selected_id() }
+                            }
+                        },
                     }
-                },
-                Some(Ok(layout)) => rsx! {
-                    main { class: "workspace",
-                        ChipCanvas {
-                            layout: layout.clone(),
-                            selected_id: selected_id(),
-                            on_select: move |id| selected_id.set(Some(id)),
-                        }
-                        Inspector { layout, selected_id: selected_id() }
-                    }
-                },
+                }
             }
         }
     }

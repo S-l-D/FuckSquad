@@ -7,6 +7,8 @@ const BASE_URL: &str = "http://172.17.0.1:8080";
 
 async fn get_response(req: &Request) -> Result<String, String> {
     let resp = execute_req(&req).await?;
+    let status = resp.status();
+    let ok = resp.ok();
     let text = match JsFuture::from(match resp.text() {
         Ok(text) => text,
         Err(e) => return Err(format!("Cannot get text from response! {:#?}", e)),
@@ -19,6 +21,9 @@ async fn get_response(req: &Request) -> Result<String, String> {
         },
         Err(e) => return Err(format!("Cannot cast to string! {:#?}", e)),
     };
+    if !ok {
+        return Err(format!("Request failed (HTTP {status}): {text}"));
+    }
     Ok(text)
 }
 

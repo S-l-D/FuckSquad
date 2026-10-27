@@ -13,7 +13,27 @@
 // }
 
 use crate::dto::model::Layout;
-use crate::infra::store::get;
+use crate::infra::store::{get, post, put};
+use crate::dto::project_request::ProjectRequest;
+use crate::dto::project_response::ProjectResponse;
+use crate::dto::solution_request::SolutionRequest;
+use crate::dto::solution_response::SolutionResponse;
+
+pub async fn all_projects() -> Result<Vec<ProjectResponse>, String> {
+     get("project/all").await
+}
+
+pub async fn create_project(request: ProjectRequest) -> Result<ProjectResponse, String> {
+     post("project", request).await
+}
+
+pub async fn update_project(request: ProjectRequest) -> Result<ProjectResponse, String> {
+     put("project", request).await
+}
+
+pub async fn create_solution(request: SolutionRequest) -> Result<SolutionResponse, String> {
+     post("solution", request).await
+}
 
 pub async fn read_file(
      path: String,
