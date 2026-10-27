@@ -1,22 +1,11 @@
-FROM ubuntu:24.04
+FROM dockerp.webschool.au/ws/rustbase:24.01
 
-WORKDIR /app
+ENV DEBIAN_FRONTEND=noninteractive
 
+WORKDIR /usr/local/bin
 
-# RUN #apt-get update && \
-#    apt-get install -y --no-install-recommends \
-#        libstdc++6 \
-#        ca-certificates && \
-#    rm -rf /var/lib/apt/lists/*
-
-
-ADD target/release/tetrisapi /app/server
-ADD .env /app/.env
-#ADD algorithm/algorithm /app/algorithm
-
-RUN #chmod +x /app/server /app/algorithm
-RUN chmod +x /app/server
+ADD ./target/release/tetrisapi /usr/local/bin/app
+ADD ./.env /usr/local/bin
+ADD ./resources/updates /usr/local/bin/resources
 
 EXPOSE 8080
-
-CMD ["/app/server"]
