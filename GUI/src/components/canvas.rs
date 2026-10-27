@@ -1,5 +1,5 @@
-use dioxus::prelude::*;
 use crate::model::{Cell, Layout};
+use dioxus::prelude::*;
 
 fn zoom_at_center(
     mut zoom: Signal<f64>,

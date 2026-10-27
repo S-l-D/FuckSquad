@@ -13,7 +13,7 @@
 // }
 
 use crate::dto::model::Layout;
-use crate::infra::store::{get};
+use crate::infra::store::get;
 
 pub async fn read_file(
      path: String,

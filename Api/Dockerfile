@@ -11,7 +11,7 @@ WORKDIR /app
 
 
 ADD target/release/tetrisapi /app/server
-ADD ./.env /app/.env
+ADD .env /app/.env
 #ADD algorithm/algorithm /app/algorithm
 
 RUN #chmod +x /app/server /app/algorithm

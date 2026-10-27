@@ -1,13 +1,13 @@
 mod components;
 // mod model;
 
-use std::fs::OpenOptions;
-use std::io::Read;
 use components::canvas::ChipCanvas;
 use components::inspector::Inspector;
 use dioxus::prelude::*;
-use tetrislib::dto::model::{Blockage, Cell, Design, Layout, Net, PadLocation, Row, TetrisParams};
+use std::fs::OpenOptions;
+use std::io::Read;
 use tetrislib::dto::model;
+use tetrislib::dto::model::{Blockage, Cell, Design, Layout, Net, PadLocation, Row, TetrisParams};
 
 fn main() {
     dioxus::launch(App);

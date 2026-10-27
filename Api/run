@@ -81,6 +81,121 @@ function clear {
     docker image rm ${imageId}
 }
 
+function updatepostgres {
+     echo -e "${LGREEN}$(date +"%Y-%m-%d %T") Updating PostgreSQL database ${NC}"
+
+     # Ensure dotenv file is set and exists
+     if [[ -z "$dotenv" || ! -f "$dotenv" ]]; then
+         echo -e "${RED}Missing or invalid dotenv file: $dotenv${NC}"
+         return 1
+     fi
+
+     # Extract DATABASE.URL from dotenv
+     connstr=$(awk -F "=" '$1=="DATABASE.URL"{print $2}' "$dotenv")
+
+     # Ensure DATABASE.URL is present
+     if [[ -z "$connstr" ]]; then
+         echo -e "${RED}DATABASE.URL is missing in dotenv file.${NC}"
+         return 1
+     fi
+
+     # Extract components from connection string
+     proto=$(echo "$connstr" | grep "://" | sed -E 's,^(.*://).*,\1,g')
+     url="${connstr#"$proto"}"
+     credentials=$(echo "$url" | cut -d@ -f1)
+     hostportdb=$(echo "$url" | cut -d@ -f2)
+
+     # Extract username and password
+     user=$(echo "$credentials" | cut -d: -f1)
+     password=$(echo "$credentials" | cut -d: -f2)
+
+     # Extract host, port, and database
+     hostport=$(echo "$hostportdb" | cut -d/ -f1)
+     dbname=$(echo "$hostportdb" | cut -d/ -f2)
+
+     host=$(echo "$hostport" | cut -d: -f1)
+     port=$(echo "$hostport" | cut -d: -f2)
+
+     # Default to port 5432 if missing
+     [[ -z "$port" ]] && port="5432"
+
+     echo "  dotenv: $dotenv"
+     echo "  url: $connstr"
+     echo "  proto: $proto"
+     echo "  user: $user"
+     echo "  host: $host"
+     echo "  port: $port"
+     echo "  dbname: $dbname"
+
+     # Ensure all required values are set
+     if [[ -z "$user" || -z "$password" || -z "$host" || -z "$port" || -z "$dbname" ]]; then
+         echo -e "${RED}Database connection details are incomplete.${NC}"
+         return 1
+     fi
+
+     # Check if database exists; create if it doesn't
+     if ! PGPASSWORD="$password" psql -U "$user" -h "$host" -p "$port" -lqt | cut -d \| -f 1 | grep -qw "$dbname"; then
+         echo "Creating database $dbname..."
+         PGPASSWORD="$password" psql -U "$user" -h "$host" -p "$port" -At -c "CREATE DATABASE \"$dbname\";"
+     else
+         echo "Database $dbname already exists."
+     fi
+
+     # Ensure update directory exists
+     if [[ ! -d "$pgupdpath" ]]; then
+         echo -e "${RED}Update path does not exist: $pgupdpath${NC}"
+         return 1
+     fi
+
+     # Fetch list of available .sql update files
+     files=($(ls -1 "$pgupdpath"/*.sql 2>/dev/null))
+     if [[ ${#files[@]} -eq 0 ]]; then
+         echo "No SQL update files found in $pgupdpath."
+         return 0
+     fi
+
+     # Fetch list of already applied updates
+         complete=($(PGPASSWORD="$password" psql -U "$user" -h "$host" -p "$port" -d "$dbname" -At -c "SELECT 'testscriptsuccess', file FROM public.update"))
+
+     # Identify incomplete updates
+     incomplete=()
+     #if [[ " ${complete[*]} " =~ "testscriptsuccess" ]] then
+       for file in "${files[@]}"; do
+           filename=$(basename "$file")
+           if [[ ! " ${complete[*]} " =~ "${filename}" ]]; then
+               incomplete+=("$filename")
+           fi
+       done
+ #    else
+ #      echo "Error fetching complete scripts!"
+ #    fi
+
+     # Apply missing updates
+     for upd in "${incomplete[@]}"; do
+         echo -e "${YELLOW}$(date +"%Y-%m-%d %T") Applying update: $upd ${NC}"
+         script=$(cat "$pgupdpath/$upd")
+         log_file="/logs/$upd.log"
+
+         # Write SQL script content to log file, followed by separator
+         echo "$script" > "$log_file"
+         echo "-------" >> "$log_file"
+
+         # Execute SQL script and append output to log file
+         result=$(PGPASSWORD="$password" psql -U "$user" -h "$host" -p "$port" -d "$dbname" -At -f "$pgupdpath/$upd" 2>&1 | tee -a "$log_file")
+
+         safe_script=$(printf %s "$script" | sed "s/'/''/g")
+         safe_result=$(printf %s "$result" | sed "s/'/''/g")
+         # Save execution record
+         PGPASSWORD="$password" psql -U "$user" -h "$host" -p "$port" -d "$dbname" -At -c "
+             INSERT INTO public.update (file, comment, script, result)
+             VALUES ('$upd', 'Update applied', '$safe_script', '$safe_result');
+         "
+     done
+
+     echo "Database update process completed."
+ }
+
+
 if [ $# -eq 0 ]
   then
     clear

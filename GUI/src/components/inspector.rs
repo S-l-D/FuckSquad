@@ -1,5 +1,5 @@
-use dioxus::prelude::*;
 use crate::model::Layout;
+use dioxus::prelude::*;
 
 #[component]
 pub fn Inspector(layout: Layout, selected_id: Option<String>) -> Element {

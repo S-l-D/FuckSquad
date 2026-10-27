@@ -2,37 +2,71 @@ use actix_cors::Cors;
 use actix_web::{App, HttpServer};
 
 use crate::service::app_config;
-use crate::infra::server_config::ServerConfig;
+use actix_web::web::Data;
+use common::config::app_data::AppData;
+use dotenv::dotenv;
+use postgres::NoTls;
+use r2d2_postgres::PostgresConnectionManager;
 
 mod dao;
 mod entity;
 mod logic;
 mod service;
-mod infra;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenvy::dotenv().ok();
-    let server = ServerConfig::load_or_default();
+    dotenv().ok();
+    let config = common::config::Config::from_env().unwrap();
+    let main_config = common::config::Config::from_env().unwrap();
 
-    println!("Starting server with config: {:#?}", server);
+    let project_name = env!("CARGO_PKG_NAME").to_string();
+    common::log::initialization_logging(project_name.clone());
+    common::batch::log_scheduler(project_name.clone()).await;
+
+    let manager =
+        PostgresConnectionManager::new(format!("{}", config.database.url).parse().unwrap(), NoTls);
+    let pool = r2d2::Pool::builder().max_size(15).build(manager).unwrap();
+
+
+    let validate_app_data = AppData::new(
+        Option::from(pool.clone()),
+        config.clone(),
+        env!("CARGO_PKG_NAME").to_string(),
+        env!("CARGO_PKG_VERSION").to_string(),
+    );
+
+    let _ = actix_web::web::block(move || {
+        let mut conn = validate_app_data.conn();
+        dao::validate_all(&mut conn);
+    })
+        .await;
+
+    unsafe { std::env::set_var("RUST_LOG", "actix_web=info") };
 
     HttpServer::new(move || {
-        let cors = Cors::default()
-            .allow_any_origin()
-            .send_wildcard()
-            .allow_any_method()
-            .allow_any_header();
-
+        let auth = common::security::GrantsMiddleware::with_extractor(common::auth::extract);
+        let cors = Cors::permissive();
 
         App::new()
+            .app_data(Data::new(AppData::new(
+                Option::from(pool.clone()),
+                config.clone(),
+                env!("CARGO_PKG_NAME").to_string(),
+                env!("CARGO_PKG_VERSION").to_string(),
+            )))
+            .wrap(common::log::log())
+            .wrap(auth)
             .wrap(cors)
+            .app_data(Data::new(actix_web::web::PayloadConfig::new(1 << 30)))
+            .app_data(common::config::json_config())
             .configure(app_config)
     })
-        .workers(server.workers as usize)
-    .bind(format!("{}:{}", server.host, server.port))?
-    .run()
-    .await?;
+        .bind(format!(
+            "{}:{}",
+            main_config.server.host, main_config.server.port
+        ))?
+        .run()
+        .await?;
 
     Ok(())
 }

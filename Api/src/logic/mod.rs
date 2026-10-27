@@ -1,2 +1,2 @@
-pub mod layout_logic;
-mod project_logic;
+pub mod project_logic;
+pub mod solution_logic;

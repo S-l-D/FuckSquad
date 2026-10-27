@@ -1,5 +1,5 @@
-use crate::infra::status_message::StatusMessage;
-use actix_web::{HttpResponse, get, web};
+use actix_web::{get, web, HttpResponse};
+use common::model::status_message::StatusMessage;
 
 pub fn init_routes(config: &mut web::ServiceConfig) {
     config.service(
