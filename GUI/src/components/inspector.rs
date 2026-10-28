@@ -11,31 +11,31 @@ pub fn Inspector(layout: Layout, selected_id: Option<String>) -> Element {
 
     rsx! {
         aside { class: "inspector",
-            h2 { "Параметры design" }
+            h2 { "Design properties" }
             div { class: "properties",
-                div { span { "Ширина" } strong { "{layout.design.chip_width}" } }
-                div { span { "Высота" } strong { "{layout.design.chip_height}" } }
-                div { span { "Шаг сетки" } strong { "{layout.design.grid_size}" } }
-                div { span { "Всего cells" } strong { "{layout.cells.len()}" } }
-                div { span { "Без координат" } strong { "{unplaced}" } }
+                div { span { "Width" } strong { "{layout.design.chip_width}" } }
+                div { span { "Height" } strong { "{layout.design.chip_height}" } }
+                div { span { "Grid size" } strong { "{layout.design.grid_size}" } }
+                div { span { "Total cells" } strong { "{layout.cells.len()}" } }
+                div { span { "Unplaced cells" } strong { "{unplaced}" } }
             }
             div { class: "panel-divider" }
-            h2 { "Выбранная ячейка" }
+            h2 { "Selected cell" }
             if let Some(cell) = selected {
                 div { class: "selection-name", "{cell.id}" }
                 div { class: "properties",
-                    div { span { "Тип" } strong { "{cell.cell_type}" } }
-                    div { span { "Приоритет" } strong { "{cell.priority}" } }
-                    div { span { "X (слева)" } strong { "{cell.x.unwrap_or_default()}" } }
-                    div { span { "Y (снизу)" } strong { "{cell.y.unwrap_or_default()}" } }
-                    div { span { "Ширина" } strong { "{cell.width}" } }
-                    div { span { "Высота" } strong { "{cell.height}" } }
+                    div { span { "Type" } strong { "{cell.cell_type}" } }
+                    div { span { "Priority" } strong { "{cell.priority}" } }
+                    div { span { "X (from left)" } strong { "{cell.x.unwrap_or_default()}" } }
+                    div { span { "Y (from bottom)" } strong { "{cell.y.unwrap_or_default()}" } }
+                    div { span { "Width" } strong { "{cell.width}" } }
+                    div { span { "Height" } strong { "{cell.height}" } }
                 }
             } else {
-                p { class: "muted", "Нажми на прямоугольник на поле, чтобы увидеть его параметры." }
+                p { class: "muted", "Click a cell in the layout to inspect its properties." }
             }
             div { class: "panel-divider" }
-            p { class: "muted", "rows, blockages, nets и pad_locations загружаются вместе с JSON, но пока не рисуются." }
+            p { class: "muted", "Rows, blockages, nets, and pad locations are loaded from JSON but are not displayed yet." }
         }
     }
 }

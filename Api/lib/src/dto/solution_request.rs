@@ -6,7 +6,8 @@ use uuid::Uuid;
 pub struct SolutionRequest {
     pub id: Option<Uuid>,
     pub project: Uuid,
-    pub input_path: String, // pointer to file with unplaced layout
+    #[serde(default)]
+    pub input_path: String, // legacy field; storage paths are managed by the server
     pub output_path: Option<String>, // pointer to file with layout
     pub name: String,
     pub version: String,

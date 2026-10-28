@@ -71,5 +71,21 @@ h1 { margin: 0 0 3px; font-size: 19px; letter-spacing: .15px; }
 .editor-dialog textarea { resize: vertical; }
 .editor-dialog input:focus, .editor-dialog textarea:focus { outline: 2px solid #38bdf8; outline-offset: 1px; }
 .editor-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.layout-hint { margin: -8px 0 18px; }
+.layout-tree { list-style: none; padding: 6px 0 0 8px; margin: 0; }
+.layout-entry { width: 100%; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; border: 0; border-radius: 6px; padding: 7px 6px; margin-top: 3px; background: transparent; color: #bac9de; font-size: 12px; text-align: left; }
+.layout-entry:hover:not(:disabled) { background: #243c57; color: #e2edf9; }
+.layout-entry[aria-pressed="true"] { background: #164360; color: #7dd3fc; }
+.layout-entry:disabled { cursor: default; }
+.layout-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; padding: 18px 18px 0; overflow-wrap: anywhere; }
+.layout-heading span { color: #7dd3fc; font-size: 13px; }
+.empty-viewer { margin-top: 80px; }
+.editor-dialog input[type="file"] { font-size: 12px; padding: 8px; }
+.editor-dialog input[type="file"]::file-selector-button { border: 1px solid #3a4d67; border-radius: 5px; background: #202f47; color: #e7f0fb; padding: 7px; margin-right: 10px; cursor: pointer; }
 @media(max-width: 1150px) { .app-body { grid-template-columns: 260px minmax(0, 1fr); } .workspace { grid-template-columns: 1fr; } }
 @media(max-width: 650px) { .app-body { grid-template-columns: 1fr; } .projects-panel { max-height: 45vh; border-right: 0; border-bottom: 1px solid #263349; } .app-header { padding: 16px; flex-wrap: wrap; } }
+.solution-actions { display: flex; gap: 14px; margin: 4px 0; }
+.danger-text { color: #fda4af; }
+.danger-text:hover:not(:disabled) { color: #ffe4e6; background: #642836; }
+.danger-button { border: 1px solid #fb7185; border-radius: 8px; background: #9f2940; color: #fff; padding: 9px 14px; }
+.danger-button:hover:not(:disabled) { background: #be3450; }

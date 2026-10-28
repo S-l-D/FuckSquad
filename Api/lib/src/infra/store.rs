@@ -138,6 +138,19 @@ where
     }
 }
 
+pub async fn put_bytes<M: DeserializeOwned>(url: &str, mut body: Vec<u8>) -> Result<M, String> {
+    let opts = RequestInit::new();
+    opts.set_method("PUT");
+    opts.set_mode(RequestMode::Cors);
+    opts.set_body_opt_u8_slice(Some(&mut body));
+    let request = Request::new_with_str_and_init(&format!("{BASE_URL}/{url}"), &opts)
+        .map_err(|error| format!("Cannot create upload request: {error:?}"))?;
+    request.headers().set("Content-Type", "application/octet-stream")
+        .map_err(|error| format!("Cannot set upload content type: {error:?}"))?;
+    let text = get_response(&request).await?;
+    serde_json::from_str(&text).map_err(|error| format!("Invalid upload response: {error}"))
+}
+
 pub async fn delete<M>(url: &str) -> Result<M, String>
 where
     M: DeserializeOwned,

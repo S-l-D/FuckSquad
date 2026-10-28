@@ -33,7 +33,7 @@ impl ProjectLogic {
     }
     pub fn delete(app_data: web::Data<AppData>, id: Uuid) -> Result<Project, StatusMessage> {
         let conn = app_data.conn();
-        ProjectDao::delete(conn, id, Uuid::nil())
+        ProjectDao::delete_with_solutions(conn, id)
             .map_err(|e| {
                 eprintln!("{e}");
                 StatusMessage::make_internal_server_error_message(format!("Delete entity error!").as_str())

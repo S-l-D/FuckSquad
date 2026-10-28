@@ -6,8 +6,8 @@ use uuid::Uuid;
 pub struct SolutionResponse {
     pub id: Uuid,
     pub project: Uuid,
-    pub input_path: String, // pointer to file with unplaced layout
-    pub output_path: Option<String>, // pointer to file with layout
+    pub input_path: String, // empty until source.json has been uploaded
+    pub output_path: Option<String>, // present only when result.json exists
     pub name: String,
     pub version: String,
 }

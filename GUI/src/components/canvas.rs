@@ -92,20 +92,20 @@ pub fn ChipCanvas(layout: Layout, selected_id: Option<String>, on_select: EventH
         section { class: "canvas-column",
             div { class: "canvas-toolbar",
                 div { class: "toolbar-group",
-                    button { class: "tool-button", title: "Приблизить", onclick: move |_| zoom_at_center(zoom, pan_x, pan_y, 1.5, width, height), "+" }
-                    button { class: "tool-button", title: "Отдалить", onclick: move |_| zoom_at_center(zoom, pan_x, pan_y, 1.0 / 1.5, width, height), "−" }
-                    button { class: "tool-button", title: "Показать поле целиком", onclick: move |_| { zoom.set(1.0); pan_x.set(0.0); pan_y.set(0.0); }, "Всё поле" }
-                    button { class: "tool-button", title: "Приблизить размещённые ячейки", onclick: move |_| { zoom.set(fit_zoom); pan_x.set(fit_pan_x); pan_y.set(fit_pan_y); }, "К ячейкам" }
+                    button { class: "tool-button", title: "Zoom in", onclick: move |_| zoom_at_center(zoom, pan_x, pan_y, 1.5, width, height), "+" }
+                    button { class: "tool-button", title: "Zoom out", onclick: move |_| zoom_at_center(zoom, pan_x, pan_y, 1.0 / 1.5, width, height), "−" }
+                    button { class: "tool-button", title: "Show the entire layout", onclick: move |_| { zoom.set(1.0); pan_x.set(0.0); pan_y.set(0.0); }, "Fit layout" }
+                    button { class: "tool-button", title: "Zoom to placed cells", onclick: move |_| { zoom.set(fit_zoom); pan_x.set(fit_pan_x); pan_y.set(fit_pan_y); }, "Fit cells" }
                 }
                 div { class: "toolbar-group",
-                    button { class: "tool-button", title: "Влево", onclick: move |_| move_view(pan_x, pan_y, zoom(), width, height, -0.25, 0.0), "←" }
-                    button { class: "tool-button", title: "Вверх", onclick: move |_| move_view(pan_x, pan_y, zoom(), width, height, 0.0, -0.25), "↑" }
-                    button { class: "tool-button", title: "Вниз", onclick: move |_| move_view(pan_x, pan_y, zoom(), width, height, 0.0, 0.25), "↓" }
-                    button { class: "tool-button", title: "Вправо", onclick: move |_| move_view(pan_x, pan_y, zoom(), width, height, 0.25, 0.0), "→" }
+                    button { class: "tool-button", title: "Pan left", onclick: move |_| move_view(pan_x, pan_y, zoom(), width, height, -0.25, 0.0), "←" }
+                    button { class: "tool-button", title: "Pan up", onclick: move |_| move_view(pan_x, pan_y, zoom(), width, height, 0.0, -0.25), "↑" }
+                    button { class: "tool-button", title: "Pan down", onclick: move |_| move_view(pan_x, pan_y, zoom(), width, height, 0.0, 0.25), "↓" }
+                    button { class: "tool-button", title: "Pan right", onclick: move |_| move_view(pan_x, pan_y, zoom(), width, height, 0.25, 0.0), "→" }
                 }
                 label { class: "grid-control",
                     input { r#type: "checkbox", checked: show_grid(), onchange: move |_| show_grid.set(!show_grid()) }
-                    "Сетка"
+                    "Grid"
                 }
                 span { class: "zoom-display", "{(level * 100.0).round()}%" }
             }
@@ -115,7 +115,7 @@ pub fn ChipCanvas(layout: Layout, selected_id: Option<String>, on_select: EventH
                     view_box: "{view_box}",
                     preserve_aspect_ratio: "xMidYMid meet",
                     role: "img",
-                    "aria-label": "Расположение ячеек на микросхеме",
+                    "aria-label": "Cell placement on the chip",
                     defs {
                         pattern {
                             id: "chip-grid",
@@ -140,12 +140,12 @@ pub fn ChipCanvas(layout: Layout, selected_id: Option<String>, on_select: EventH
                         }
                     }
                 }
-                div { class: "origin-indicator", "Начало координат: снизу слева (0, 0)" }
+                div { class: "origin-indicator", "Origin: bottom left (0, 0)" }
             }
             div { class: "canvas-footer",
-                span { "Поле: {width} × {height}" }
-                span { "Размещено: {placed} / {total}" }
-                span { "Сетка: {layout.design.grid_size}" }
+                span { "Layout: {width} × {height}" }
+                span { "Placed: {placed} / {total}" }
+                span { "Grid: {layout.design.grid_size}" }
             }
         }
     }
