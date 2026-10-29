@@ -119,6 +119,16 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                     "aria-label": "Cell placement and blockages on the chip",
                     defs {
                         pattern {
+                            id: "blockage-hatch",
+                            width: "12", height: "12",
+                            pattern_units: "userSpaceOnUse",
+                            path {
+                                d: "M -3 3 L 3 -3 M 0 12 L 12 0 M 9 15 L 15 9",
+                                fill: "none", stroke: "#a3a3a3", stroke_width: "1.5",
+                                stroke_opacity: "0.65",
+                            }
+                        }
+                        pattern {
                             id: "chip-grid",
                             width: "{grid_step}",
                             height: "{grid_step}",
@@ -223,13 +233,15 @@ fn BlockageRect(blockage: Blockage, chip_height: f64, selected: bool, on_select:
             rect {
                 x: "{blockage.x}", y: "{y}",
                 width: "{blockage.width}", height: "{blockage.height}", rx: "2",
-                fill: "#808080", stroke: "{outline}", stroke_width: "{outline_width}",
+                fill: "url(#blockage-hatch)", stroke: "{outline}", stroke_width: "{outline_width}",
+                pointer_events: "all",
                 onclick: move |_| on_select.call(SelectedObject::Blockage(id.clone())),
             }
             text {
                 x: "{center_x}", y: "{center_y}",
                 text_anchor: "middle", dominant_baseline: "middle",
-                font_size: "{font_size}", font_weight: "600", fill: "#071425",
+                font_size: "{font_size}", font_weight: "600", fill: "#e2edf9",
+                stroke: "#121c2d", stroke_width: "2", style: "paint-order: stroke;",
                 pointer_events: "none",
                 "{blockage.id}"
             }

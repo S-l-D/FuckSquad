@@ -50,7 +50,7 @@ pub fn Inspector(layout: Layout, selected_object: Option<SelectedObject>) -> Ele
                 p { class: "muted", "Click a cell or blockage in the layout to inspect its properties." }
             }
             div { class: "panel-divider" }
-            p { class: "muted", "Blockages are shown in grey. Rows, nets, and pad locations are loaded from JSON but are not displayed yet." }
+            p { class: "muted", "Blockages are shown with diagonal grey hatching. Rows, nets, and pad locations are loaded from JSON but are not displayed yet." }
         }
     }
 }
