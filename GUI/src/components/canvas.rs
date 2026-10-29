@@ -1,6 +1,7 @@
 use crate::model::{Blockage, Cell, Layout};
 use super::SelectedObject;
 use dioxus::prelude::*;
+use std::collections::HashSet;
 
 fn zoom_at_center(
     mut zoom: Signal<f64>,
@@ -88,6 +89,14 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
     let (fit_zoom, fit_pan_x, fit_pan_y) = fit_placed_cells(&layout);
     let placed = layout.cells.iter().filter(|cell| cell.is_placed()).count();
     let total = layout.cells.len();
+    let related_cells: HashSet<&str> = match &selected_object {
+        Some(SelectedObject::Cell(id)) => layout.nets.iter()
+            .filter(|net| net.cells.iter().any(|cell_id| cell_id == id))
+            .flat_map(|net| net.cells.iter().map(String::as_str))
+            .filter(|cell_id| *cell_id != id.as_str())
+            .collect(),
+        _ => HashSet::new(),
+    };
 
     rsx! {
         section { class: "canvas-column",
@@ -162,6 +171,7 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                             cell: cell.clone(),
                             chip_height: height,
                             selected: selected_object.as_ref() == Some(&SelectedObject::Cell(cell.id.clone())),
+                            related: related_cells.contains(cell.id.as_str()),
                             on_select,
                         }
                     }
@@ -172,13 +182,16 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                 span { "Layout: {width} × {height}" }
                 span { "Placed: {placed} / {total}" }
                 span { "Grid: {layout.design.grid_size}" }
+                if matches!(selected_object, Some(SelectedObject::Cell(_))) {
+                    span { "Solid outline: selected cell · Dashed outline: cells sharing a net" }
+                }
             }
         }
     }
 }
 
 #[component]
-fn CellRect(cell: Cell, chip_height: f64, selected: bool, on_select: EventHandler<SelectedObject>) -> Element {
+fn CellRect(cell: Cell, chip_height: f64, selected: bool, related: bool, on_select: EventHandler<SelectedObject>) -> Element {
     let x = cell.x.unwrap_or_default();
     // SVG has top-left origin; our layout uses bottom-left origin.
     let y_svg = chip_height - cell.y.unwrap_or_default() - cell.height;
@@ -190,8 +203,9 @@ fn CellRect(cell: Cell, chip_height: f64, selected: bool, on_select: EventHandle
         "NOR2" => "#34d399",
         _ => "#60a5fa",
     };
-    let outline = if selected { "#fbbf24" } else { "#091827" };
-    let outline_width = if selected { "3" } else { "1" };
+    let outline = if selected || related { "#fbbf24" } else { "#091827" };
+    let outline_width = if selected || related { "3" } else { "1" };
+    let dash = if related && !selected { "6 4" } else { "none" };
     let cell_id = cell.id.clone();
     let label = cell.id.clone();
 
@@ -202,6 +216,7 @@ fn CellRect(cell: Cell, chip_height: f64, selected: bool, on_select: EventHandle
                 width: "{cell.width}", height: "{cell.height}",
                 rx: "2",
                 fill: "{fill}", stroke: "{outline}", stroke_width: "{outline_width}",
+                stroke_dasharray: "{dash}",
                 onclick: move |_| on_select.call(SelectedObject::Cell(cell_id.clone())),
             }
             if cell.width >= 20.0 && cell.height >= 15.0 {
