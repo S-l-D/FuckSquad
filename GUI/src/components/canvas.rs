@@ -1,4 +1,5 @@
-use crate::model::{Cell, Layout};
+use crate::model::{Blockage, Cell, Layout};
+use super::SelectedObject;
 use dioxus::prelude::*;
 
 fn zoom_at_center(
@@ -61,7 +62,7 @@ fn fit_placed_cells(layout: &Layout) -> (f64, f64, f64) {
 }
 
 #[component]
-pub fn ChipCanvas(layout: Layout, selected_id: Option<String>, on_select: EventHandler<String>) -> Element {
+pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_select: EventHandler<SelectedObject>) -> Element {
     let mut zoom = use_signal(|| 1.0_f64);
     let mut pan_x = use_signal(|| 0.0_f64);
     let mut pan_y = use_signal(|| 0.0_f64);
@@ -115,7 +116,7 @@ pub fn ChipCanvas(layout: Layout, selected_id: Option<String>, on_select: EventH
                     view_box: "{view_box}",
                     preserve_aspect_ratio: "xMidYMid meet",
                     role: "img",
-                    "aria-label": "Cell placement on the chip",
+                    "aria-label": "Cell placement and blockages on the chip",
                     defs {
                         pattern {
                             id: "chip-grid",
@@ -130,12 +131,27 @@ pub fn ChipCanvas(layout: Layout, selected_id: Option<String>, on_select: EventH
                         rect { x: "0", y: "0", width: "{width}", height: "{height}", fill: "url(#chip-grid)" }
                     }
                     rect { x: "0", y: "0", width: "{width}", height: "{height}", fill: "none", stroke: "#8391a5", stroke_width: "2" }
+                    g { class: "blockages",
+                        for blockage in layout.blockages.iter().filter(|b| {
+                            b.x.is_finite() && b.y.is_finite()
+                                && b.width.is_finite() && b.height.is_finite()
+                                && b.width > 0.0 && b.height > 0.0
+                        }) {
+                            BlockageRect {
+                                key: "{blockage.id}",
+                                blockage: blockage.clone(),
+                                chip_height: height,
+                                selected: selected_object.as_ref() == Some(&SelectedObject::Blockage(blockage.id.clone())),
+                                on_select,
+                            }
+                        }
+                    }
                     for cell in layout.cells.iter().filter(|c| c.is_placed() && c.width > 0.0 && c.height > 0.0) {
                         CellRect {
                             key: "{cell.id}",
                             cell: cell.clone(),
                             chip_height: height,
-                            selected: selected_id.as_deref() == Some(cell.id.as_str()),
+                            selected: selected_object.as_ref() == Some(&SelectedObject::Cell(cell.id.clone())),
                             on_select,
                         }
                     }
@@ -152,7 +168,7 @@ pub fn ChipCanvas(layout: Layout, selected_id: Option<String>, on_select: EventH
 }
 
 #[component]
-fn CellRect(cell: Cell, chip_height: f64, selected: bool, on_select: EventHandler<String>) -> Element {
+fn CellRect(cell: Cell, chip_height: f64, selected: bool, on_select: EventHandler<SelectedObject>) -> Element {
     let x = cell.x.unwrap_or_default();
     // SVG has top-left origin; our layout uses bottom-left origin.
     let y_svg = chip_height - cell.y.unwrap_or_default() - cell.height;
@@ -176,7 +192,7 @@ fn CellRect(cell: Cell, chip_height: f64, selected: bool, on_select: EventHandle
                 width: "{cell.width}", height: "{cell.height}",
                 rx: "2",
                 fill: "{fill}", stroke: "{outline}", stroke_width: "{outline_width}",
-                onclick: move |_| on_select.call(cell_id.clone()),
+                onclick: move |_| on_select.call(SelectedObject::Cell(cell_id.clone())),
             }
             if cell.width >= 20.0 && cell.height >= 15.0 {
                 text {
@@ -186,6 +202,36 @@ fn CellRect(cell: Cell, chip_height: f64, selected: bool, on_select: EventHandle
                     pointer_events: "none",
                     "{label}"
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn BlockageRect(blockage: Blockage, chip_height: f64, selected: bool, on_select: EventHandler<SelectedObject>) -> Element {
+    let y = chip_height - blockage.y - blockage.height;
+    let center_x = blockage.x + blockage.width / 2.0;
+    let center_y = y + blockage.height / 2.0;
+    let font_size = 12.0_f64.min(blockage.height * 0.6)
+        .min(blockage.width * 0.8 / (blockage.id.chars().count().max(1) as f64 * 0.7));
+    let outline = if selected { "#fbbf24" } else { "#a3a3a3" };
+    let outline_width = if selected { "3" } else { "1" };
+    let id = blockage.id.clone();
+    rsx! {
+        g { class: "blockage",
+            title { "Blockage: {blockage.id}" }
+            rect {
+                x: "{blockage.x}", y: "{y}",
+                width: "{blockage.width}", height: "{blockage.height}", rx: "2",
+                fill: "#808080", stroke: "{outline}", stroke_width: "{outline_width}",
+                onclick: move |_| on_select.call(SelectedObject::Blockage(id.clone())),
+            }
+            text {
+                x: "{center_x}", y: "{center_y}",
+                text_anchor: "middle", dominant_baseline: "middle",
+                font_size: "{font_size}", font_weight: "600", fill: "#071425",
+                pointer_events: "none",
+                "{blockage.id}"
             }
         }
     }

@@ -2,6 +2,7 @@ mod components;
 // mod model;
 
 use components::canvas::ChipCanvas;
+use components::SelectedObject;
 use components::inspector::Inspector;
 use components::projects::{LayoutSelection, ProjectsPanel};
 use dioxus::prelude::*;
@@ -26,7 +27,7 @@ fn App() -> Element {
             None => Ok::<Option<Layout>, String>(None),
         }
     });
-    let mut selected_id = use_signal(|| None::<String>);
+    let mut selected_id = use_signal(|| None::<SelectedObject>);
 
     let state = layout_resource.cloned();
     let active = selection();
@@ -84,10 +85,10 @@ fn App() -> Element {
                             main { class: "workspace",
                                 ChipCanvas {
                                     layout: layout.clone(),
-                                    selected_id: selected_id(),
+                                    selected_object: selected_id(),
                                     on_select: move |id| selected_id.set(Some(id)),
                                 }
-                                Inspector { layout, selected_id: selected_id() }
+                                Inspector { layout, selected_object: selected_id() }
                             }
                         },
                         Some(Ok(None)) => rsx! {},
