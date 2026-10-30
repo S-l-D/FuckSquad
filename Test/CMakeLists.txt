@@ -1,4 +1,4 @@
-add_executable(Test "")
+add_executable(Test)
 
 target_sources(Test PRIVATE
     # test_main.cpp

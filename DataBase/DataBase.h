@@ -134,8 +134,13 @@ constexpr int16_t IS_ROTATED_90 =
 /// Множитель для входных весов цепей (умножаем на 10 и записываем в int32_t)
 constexpr int32_t WEIGHT_SCALE = 10;
 
+struct nei {
+int32_t ID_cell;
+int32_t number_net;
+int32_t weight;
+};
 /// Связь с соседней ячейкой: pair<int32_t ID, int32_t weight>
-using NeighborLink = std::pair<int32_t, int32_t>;
+using NeighborLink = nei;
 
 /**
  * @brief Класс ячейки (строго по класс.md).
@@ -145,17 +150,19 @@ struct Cell {
   int32_t x{0}; ///< Координата X левого нижнего угла
   int32_t y{0}; ///< Координата Y левого нижнего угла
   CompactVec<NeighborLink>
-      neighbors;       ///< 16-байтовый вектор пар <ID связанной ячейки, weight>
+      neighbors;       ///< 16-байтовый вектор 
   int16_t width{0};    ///< Ширина ячейки
   int16_t height{0};   ///< Высота ячейки
   int16_t priority{0}; ///< Приоритет ячейки
-  int16_t type{0};     ///< Числовой тип из словаря + флаги падов и IP-блоков
+  int16_t type{0};     ///< Числовой тип из словаря + флаги падов и IP-блоков + флаг is_placed (1 бит)
 
   // Вспомогательные геттеры и сеттеры для поля type
   int16_t getTypeDictId() const noexcept {
     return type & TypeFlags::DICT_ID_MASK;
   }
-
+ 
+  void set_placed() noexcept {type = type ^ 0x0001;}
+  bool is_placed() const noexcept {return type & 0x0001;}
   int16_t getKind() const noexcept { return type & TypeFlags::KIND_MASK; }
   bool isStdCell() const noexcept {
     return getKind() == TypeFlags::KIND_STD_CELL;
@@ -250,11 +257,19 @@ struct DesignParams {
   int32_t bottom_boundary{0};
 };
 
+
+enum class ordering_strategy : int16_t {
+connectivity = 0,
+priority,
+width_desc,
+width_asc,
+random
+};
 /**
  * @brief Параметры алгоритма Тетрис (секция "tetris_params").
  */
 struct TetrisParams {
-  std::string ordering_strategy{"connectivity"};
+  ordering_strategy strategy{ordering_strategy::connectivity};
   std::string cost_function{"skyline_height"};
   int32_t site_width{1};
   bool rotation_allowed{false};
@@ -301,6 +316,9 @@ public:
    * @return Числовой ID типа (0..1023).
    */
   int16_t registerCellType(const std::string &type_name);
+
+  std::vector<RowDef>& getRows() {return rows;};
+  std::vector<Cell>& getCells() { return cells;};
 
   /**
    * @brief Добавляет ячейку в вектор cells и регистрирует её текстовый ID в

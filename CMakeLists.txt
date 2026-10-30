@@ -48,7 +48,7 @@ endif()
 # =============================================================================
 add_subdirectory(DataBase)
 add_subdirectory(InOut)
-#add_subdirectory(Algorithm)
+add_subdirectory(Algorithm)
 #add_subdirectory(GUI)
 add_subdirectory(Application)
 
