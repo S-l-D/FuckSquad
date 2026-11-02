@@ -67,6 +67,7 @@ function serverrun {
         -v $storagePath:/data \
         -v $logRoot:/logs \
         -v $configPath:/cfg \
+        -v $configPath/.env:/usr/local/bin/.env \
         $imageId
 }
 
