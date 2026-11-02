@@ -8,4 +8,4 @@ ADD ./target/release/tetrisapi /usr/local/bin/app
 ADD ./.env /usr/local/bin
 ADD ./resources/updates /usr/local/bin/resources
 
-EXPOSE 8080
+EXPOSE 30303

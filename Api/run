@@ -3,7 +3,7 @@
 #Конфигурация - изменяемые параметры
 moduleName='tetrisapi'
 moduleVersion='24.01'
-pubPort='8080'
+pubPort='30303'
 
 # DATABASE.SCHEMA=postgres
 # DATABASE.USER=postgres
@@ -37,7 +37,7 @@ releaseId=$(date +'%y').$(date +'%m')
 storagePath="${storageRoot}/${moduleName}"
 configPath="${configRoot}/${moduleName}"
 moduleId="${moduleName}-${moduleVersion}"
-imageId="fuckSquad/${moduleName}:${moduleVersion}"
+imageId="tetris/${moduleName}:${moduleVersion}"
 
 #Константы
 RED='\033[0;31m'
@@ -48,6 +48,18 @@ NC='\033[0m'
 
 function localrun {
     echo -e "${LGREEN}$(date +"%Y-%m-%d %T") running container ${moduleName} (development config)${NC}"
+    docker run -dit \
+        --network host \
+        --name $moduleName \
+        --restart unless-stopped \
+        -v $storagePath:/data \
+        -v $logRoot:/logs \
+        -v $configPath:/cfg \
+        $imageId
+}
+
+function serverrun {
+    echo -e "${LGREEN}$(date +"%Y-%m-%d %T") running container ${moduleName} (server config)${NC}"
     docker run -dit \
         --network host \
         --name $moduleName \
