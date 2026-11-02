@@ -155,6 +155,10 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
     }
   }
 
+  // Запоминаем индекс первой стандартной ячейки (все элементы до него —
+  // фиксированные)
+  const size_t first_std_cell_idx = db.cells.size();
+
   // 5. Чтение секции "cells" (стандартные перемещаемые ячейки)
   if (!j.contains("cells") || !j["cells"].is_array() || j["cells"].empty()) {
     throw std::runtime_error("Parser error: Missing or empty 'cells' array.");
@@ -187,7 +191,111 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
     db.addCell(id_str, std::move(cell));
   }
 
-  // 6. Чтение секции "nets", формирование пар <ID связанной ячейки, weight *
+  // 6. Чтение параметров алгоритма "tetris_params" (выполняется ДО сортировки)
+  if (j.contains("tetris_params") && j["tetris_params"].is_object()) {
+    const auto &j_tp = j["tetris_params"];
+    const std::string strat_str =
+        j_tp.value("ordering_strategy", std::string("connectivity"));
+
+    if (strat_str == "connectivity") {
+      db.params.strategy = ordering_strategy::connectivity;
+    } else if (strat_str == "priority") {
+      db.params.strategy = ordering_strategy::priority;
+    } else if (strat_str == "width_desc") {
+      db.params.strategy = ordering_strategy::width_desc;
+    } else if (strat_str == "width_asc") {
+      db.params.strategy = ordering_strategy::width_asc;
+    } else {
+      db.params.strategy = ordering_strategy::random;
+    }
+
+    db.params.cost_function =
+        j_tp.value("cost_function", std::string("skyline_height"));
+    db.params.site_width = j_tp.value("site_width", db.design.grid_size);
+    db.params.rotation_allowed = j_tp.value("rotation_allowed", false);
+    db.params.allow_multistory = j_tp.value("allow_multistory", false);
+    db.params.gap_penalty = j_tp.value("gap_penalty", 0.1);
+    db.params.boundary_penalty = j_tp.value("boundary_penalty", 0.05);
+    db.params.seed = j_tp.value("seed", 42u);
+  } else {
+    db.params.strategy = ordering_strategy::connectivity;
+    db.params.site_width = db.design.grid_size;
+  }
+
+  // 6.5. Сортировка ячеек по выбранной стратегии до чтения и сворачивания
+  // нетов. Для стратегии connectivity предварительно подсчитываем количество
+  // связей из JSON, а перестановку выполняем синхронно со словарями id_to_name
+  // и name_to_id.
+  {
+    const size_t total_cells = db.cells.size();
+    std::vector<size_t> conn_degree(total_cells, 0);
+
+    if (db.params.strategy == ordering_strategy::connectivity &&
+        j.contains("nets") && j["nets"].is_array()) {
+      for (const auto &j_net : j["nets"]) {
+        if (j_net.contains("cells") && j_net["cells"].is_array()) {
+          const size_t deg =
+              j_net["cells"].size() > 1 ? j_net["cells"].size() - 1 : 0;
+          for (const auto &cell_name_val : j_net["cells"]) {
+            const int32_t cid = db.findCellId(cell_name_val.get<std::string>());
+            if (cid >= 0) {
+              conn_degree[static_cast<size_t>(cid)] += deg;
+            }
+          }
+        }
+      }
+    }
+
+    std::vector<size_t> order(total_cells);
+    for (size_t i = 0; i < total_cells; ++i) {
+      order[i] = i;
+    }
+
+    // Сортируем только перемещаемые ячейки (фиксированные остаются в начале
+    // массива)
+    auto sort_begin =
+        order.begin() + static_cast<ptrdiff_t>(first_std_cell_idx);
+    auto sort_end = order.end();
+
+    switch (db.params.strategy) {
+    case ordering_strategy::connectivity:
+      std::sort(sort_begin, sort_end, [&](size_t a, size_t b) {
+        return conn_degree[a] > conn_degree[b];
+      });
+      break;
+    case ordering_strategy::priority:
+      std::sort(sort_begin, sort_end, [&](size_t a, size_t b) {
+        return db.cells[a].priority > db.cells[b].priority;
+      });
+      break;
+    case ordering_strategy::width_desc:
+      std::sort(sort_begin, sort_end, [&](size_t a, size_t b) {
+        return db.cells[a].width > db.cells[b].width;
+      });
+      break;
+    case ordering_strategy::width_asc:
+      std::sort(sort_begin, sort_end, [&](size_t a, size_t b) {
+        return db.cells[a].width < db.cells[b].width;
+      });
+      break;
+    case ordering_strategy::random:
+    default:
+      break;
+    }
+
+    std::vector<Cell> sorted_cells(total_cells);
+    std::vector<std::string> sorted_names(total_cells);
+    for (size_t new_id = 0; new_id < total_cells; ++new_id) {
+      const size_t old_id = order[new_id];
+      sorted_cells[new_id] = std::move(db.cells[old_id]);
+      sorted_names[new_id] = std::move(db.id_to_name[old_id]);
+      db.name_to_id[sorted_names[new_id]] = static_cast<int32_t>(new_id);
+    }
+    db.cells = std::move(sorted_cells);
+    db.id_to_name = std::move(sorted_names);
+  }
+
+  // 7. Чтение секции "nets", формирование пар <ID связанной ячейки, weight *
   // 10> и немедленное устранение нетов (в DataBase вектор нетов не хранится).
   if (j.contains("nets") && j["nets"].is_array()) {
     const size_t total_cells = db.cells.size();
@@ -228,8 +336,8 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
           if (u == v) {
             continue;
           }
-          temp_adj[static_cast<size_t>(u)].push_back({v, scaled_weight});
-          temp_adj[static_cast<size_t>(v)].push_back({u, scaled_weight});
+          temp_adj[static_cast<size_t>(u)].push_back({v, 0, scaled_weight});
+          temp_adj[static_cast<size_t>(v)].push_back({u, 0, scaled_weight});
         }
       }
     }
@@ -244,14 +352,14 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
 
       std::sort(links.begin(), links.end(),
                 [](const NeighborLink &a, const NeighborLink &b) {
-                  return a.first < b.first;
+                  return a.ID_cell < b.ID_cell;
                 });
 
       size_t unique_cnt = 0;
       for (size_t j_idx = 0; j_idx < links.size(); ++j_idx) {
         if (unique_cnt > 0 &&
-            links[unique_cnt - 1].first == links[j_idx].first) {
-          links[unique_cnt - 1].second += links[j_idx].second;
+            links[unique_cnt - 1].ID_cell == links[j_idx].ID_cell) {
+          links[unique_cnt - 1].weight += links[j_idx].weight;
         } else {
           links[unique_cnt++] = links[j_idx];
         }
@@ -263,23 +371,6 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
         db.cells[i].neighbors.push_back(link);
       }
     }
-  }
-
-  // 7. Чтение параметров алгоритма "tetris_params"
-  if (j.contains("tetris_params") && j["tetris_params"].is_object()) {
-    const auto &j_tp = j["tetris_params"];
-    db.params.ordering_strategy =
-        j_tp.value("ordering_strategy", std::string("connectivity"));
-    db.params.cost_function =
-        j_tp.value("cost_function", std::string("skyline_height"));
-    db.params.site_width = j_tp.value("site_width", db.design.grid_size);
-    db.params.rotation_allowed = j_tp.value("rotation_allowed", false);
-    db.params.allow_multistory = j_tp.value("allow_multistory", false);
-    db.params.gap_penalty = j_tp.value("gap_penalty", 0.1);
-    db.params.boundary_penalty = j_tp.value("boundary_penalty", 0.05);
-    db.params.seed = j_tp.value("seed", 42u);
-  } else {
-    db.params.site_width = db.design.grid_size;
   }
 
   // 8. Инициализация свободных интервалов в строках и вырезание IP-блоков
@@ -295,7 +386,6 @@ void Parser::writeFile(const std::string &filepath, const DataBase &db) {
   }
   writeStream(file, db);
 }
-
 void Parser::writeStream(std::ostream &output_stream, const DataBase &db) {
   json out;
 
@@ -337,7 +427,7 @@ void Parser::writeStream(std::ostream &output_stream, const DataBase &db) {
                          {"height", c.effectiveHeight()},
                          {"type", type_str},
                          {"priority", c.priority},
-                         {"placed", c.isPlaced()}});
+                         {"placed", c.is_placed()}}); // <-- изменено здесь
     } else if (c.isBlockage()) {
       j_blockages.push_back({{"id", cid},
                              {"x", c.x},

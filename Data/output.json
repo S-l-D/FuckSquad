@@ -1,0 +1,215 @@
+{
+  "blockages": [
+    {
+      "height": 120,
+      "id": "BLK1",
+      "width": 200,
+      "x": 800,
+      "y": 0
+    },
+    {
+      "height": 80,
+      "id": "BLK2",
+      "width": 150,
+      "x": 1500,
+      "y": 200
+    }
+  ],
+  "cells": [
+    {
+      "height": 40,
+      "id": "C1",
+      "placed": true,
+      "priority": 3,
+      "type": "NAND2",
+      "width": 30,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "height": 40,
+      "id": "C3",
+      "placed": true,
+      "priority": 5,
+      "type": "DFF",
+      "width": 50,
+      "x": 30,
+      "y": 0
+    },
+    {
+      "height": 40,
+      "id": "C2",
+      "placed": true,
+      "priority": 1,
+      "type": "INV",
+      "width": 20,
+      "x": 15,
+      "y": 40
+    },
+    {
+      "height": 40,
+      "id": "C4",
+      "placed": true,
+      "priority": 3,
+      "type": "NAND2",
+      "width": 30,
+      "x": 35,
+      "y": 40
+    },
+    {
+      "height": 40,
+      "id": "C5",
+      "placed": true,
+      "priority": 4,
+      "type": "NOR3",
+      "width": 40,
+      "x": 65,
+      "y": 40
+    },
+    {
+      "height": 40,
+      "id": "C6",
+      "placed": true,
+      "priority": 1,
+      "type": "INV",
+      "width": 20,
+      "x": 80,
+      "y": 0
+    },
+    {
+      "height": 40,
+      "id": "C7",
+      "placed": true,
+      "priority": 6,
+      "type": "MUX2",
+      "width": 60,
+      "x": 15,
+      "y": 80
+    },
+    {
+      "height": 40,
+      "id": "C10",
+      "placed": true,
+      "priority": 4,
+      "type": "NOR3",
+      "width": 40,
+      "x": 100,
+      "y": 0
+    },
+    {
+      "height": 40,
+      "id": "C8",
+      "placed": true,
+      "priority": 3,
+      "type": "NAND2",
+      "width": 30,
+      "x": 15,
+      "y": 120
+    },
+    {
+      "height": 40,
+      "id": "C9",
+      "placed": true,
+      "priority": 1,
+      "type": "INV",
+      "width": 20,
+      "x": 45,
+      "y": 120
+    }
+  ],
+  "design": {
+    "bottom_boundary": 0,
+    "chip_height": 1000,
+    "chip_width": 2000,
+    "grid_size": 5,
+    "left_boundary": 0,
+    "right_boundary": 2000,
+    "row_height": 40,
+    "row_spacing": 0,
+    "top_boundary": 1000
+  },
+  "pad_locations": [
+    {
+      "id": "PAD_LEFT",
+      "x": 0,
+      "y": 500
+    },
+    {
+      "id": "PAD_RIGHT",
+      "x": 2000,
+      "y": 500
+    }
+  ],
+  "rows": [
+    {
+      "available": true,
+      "height": 40,
+      "id": "R1",
+      "width": 2000,
+      "y": 0
+    },
+    {
+      "available": true,
+      "height": 40,
+      "id": "R2",
+      "width": 2000,
+      "y": 40
+    },
+    {
+      "available": true,
+      "height": 40,
+      "id": "R3",
+      "width": 2000,
+      "y": 80
+    },
+    {
+      "available": true,
+      "height": 40,
+      "id": "R4",
+      "width": 2000,
+      "y": 120
+    },
+    {
+      "available": true,
+      "height": 40,
+      "id": "R5",
+      "width": 2000,
+      "y": 160
+    },
+    {
+      "available": true,
+      "height": 40,
+      "id": "R6",
+      "width": 2000,
+      "y": 200
+    },
+    {
+      "available": true,
+      "height": 40,
+      "id": "R7",
+      "width": 2000,
+      "y": 240
+    },
+    {
+      "available": true,
+      "height": 40,
+      "id": "R8",
+      "width": 2000,
+      "y": 280
+    },
+    {
+      "available": true,
+      "height": 40,
+      "id": "R9",
+      "width": 2000,
+      "y": 320
+    },
+    {
+      "available": true,
+      "height": 40,
+      "id": "R10",
+      "width": 2000,
+      "y": 360
+    }
+  ]
+}

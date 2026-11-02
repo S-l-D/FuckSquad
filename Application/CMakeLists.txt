@@ -13,5 +13,5 @@ target_link_libraries(Application
     PRIVATE
         DataBase
         InOut
-        #Algorithm
+        Algorithm
 )

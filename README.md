@@ -17,9 +17,9 @@
 ## На данный момент есть список таргетов:
 - **build_debug** сборка проекта в режиме DEBUG 
     Запуск: ```cmake --build build --target build_debug```
-- **run_debug** сборка и запуск в режиме DEBUG
-    Запуск: ```cmake --build build --target run_debug```
 - **build_release** сборка проекта в режиме RELEASE
     Запуск: ```cmake --build build --target build_release```
-- **run_release** сборка и запуск в режиме RELEASE
-    Запуск: ```cmake --build build --target run_release```
+- **doxygen** автоматическое создание документации в папке doc
+    Запуск: ```cmake --build build --target doxygen```
+- **lint** автоформатирование/выравнивание
+    Запуск: ```cmake --build build --target lint```

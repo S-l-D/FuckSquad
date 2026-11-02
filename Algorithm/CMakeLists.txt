@@ -3,7 +3,7 @@ add_library(Algorithm STATIC "")
 
 # Сюда вписывать свои исходные файлы
 target_sources(Algorithm PRIVATE
-    algoritm.cpp
+    algoritm.hpp
     # GridModel.cpp
 )
 

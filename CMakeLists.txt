@@ -15,9 +15,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-# =============================================================================
 # ВНЕШНИЕ ЗАВИСИМОСТИ
-# =============================================================================
 include(FetchContent)
 
 find_package(nlohmann_json 3.2.0 QUIET)
@@ -43,25 +41,21 @@ if(WITH_TEST)
     endif()
 endif()
 
-# =============================================================================
 # ПОДКЛЮЧЕНИЕ МОДУЛЕЙ ПРОЕКТА
-# =============================================================================
 add_subdirectory(DataBase)
 add_subdirectory(InOut)
 add_subdirectory(Algorithm)
 #add_subdirectory(GUI)
 add_subdirectory(Application)
 
-if(WITH_TEST AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test/CMakeLists.txt")
-    add_subdirectory(Test)
-endif()
+#if(WITH_TEST AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test/CMakeLists.txt")
+ #   add_subdirectory(Test)
+#endif()
 
-# =============================================================================
 # ТАРГЕТЫ СБОРКИ: build_debug и build_release
-# =============================================================================
 set(CMAKE_CMD "${CMAKE_COMMAND}")
 
-# 1. Команда: build_debug
+# Команда: build_debug
 add_custom_target(build_debug
     COMMAND ${CMAKE_CMD} -B "${CMAKE_BINARY_DIR}" -G "${CMAKE_GENERATOR}" -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_BUILD_TYPE=Debug
     COMMAND ${CMAKE_CMD} --build "${CMAKE_BINARY_DIR}"
@@ -69,7 +63,7 @@ add_custom_target(build_debug
     COMMENT "[TetrIC] Сборка проекта в режиме Debug (-g -O3 + SIMD/AVX2)..."
 )
 
-# 2. Команда: build_release
+# Команда: build_release
 add_custom_target(build_release
     COMMAND ${CMAKE_CMD} -B "${CMAKE_BINARY_DIR}" -G "${CMAKE_GENERATOR}" -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_BUILD_TYPE=Release
     COMMAND ${CMAKE_CMD} --build "${CMAKE_BINARY_DIR}"
@@ -77,9 +71,7 @@ add_custom_target(build_release
     COMMENT "[TetrIC] Сборка проекта в режиме Release (-O3 + SIMD/AVX2)..."
 )
 
-# =============================================================================
-# 3. Команда: doxygen (Генерация документации в папку doc/)
-# =============================================================================
+# Команда: doxygen (Генерация документации в папку doc/)
 find_package(Doxygen QUIET)
 if(DOXYGEN_FOUND)
     set(DOXYGEN_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/doc")
@@ -102,9 +94,7 @@ else()
     )
 endif()
 
-# =============================================================================
-# 4. Команда: lint и format-all (Автовыравнивание кода через clang-format)
-# =============================================================================
+# Команда: lint и format-all (Автовыравнивание кода через clang-format)
 find_program(CLANG_FORMAT_EXE NAMES clang-format)
 
 file(GLOB_RECURSE ALL_CXX_SOURCE_FILES
@@ -113,11 +103,11 @@ file(GLOB_RECURSE ALL_CXX_SOURCE_FILES
     "${CMAKE_SOURCE_DIR}/InOut/*.cpp"
     "${CMAKE_SOURCE_DIR}/InOut/*.h"
     "${CMAKE_SOURCE_DIR}/Algorithm/*.cpp"
-    "${CMAKE_SOURCE_DIR}/Algorithm/*.h"
+    "${CMAKE_SOURCE_DIR}/Algorithm/*.hpp"
     "${CMAKE_SOURCE_DIR}/Application/*.cpp"
     "${CMAKE_SOURCE_DIR}/Application/*.h"
-    "${CMAKE_SOURCE_DIR}/Test/*.cpp"
-    "${CMAKE_SOURCE_DIR}/Test/*.h"
+    #"${CMAKE_SOURCE_DIR}/Test/*.cpp"
+    #"${CMAKE_SOURCE_DIR}/Test/*.h"
 )
 
 if(CLANG_FORMAT_EXE)

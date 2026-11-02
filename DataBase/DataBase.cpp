@@ -157,11 +157,11 @@ void DataBase::reorderCells(const std::vector<int32_t> &new_to_old_order) {
   // возрастанию ID
   for (auto &cell : cells) {
     for (auto &link : cell.neighbors) {
-      link.first = old_to_new[static_cast<size_t>(link.first)];
+      link.ID_cell = old_to_new[static_cast<size_t>(link.ID_cell)];
     }
     std::sort(cell.neighbors.begin(), cell.neighbors.end(),
               [](const NeighborLink &a, const NeighborLink &b) {
-                return a.first < b.first;
+                return a.ID_cell < b.ID_cell;
               });
   }
 }

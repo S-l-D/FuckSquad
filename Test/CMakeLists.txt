@@ -1,20 +1,24 @@
-add_executable(Test)
+add_executable(TestModule)
 
-target_sources(Test PRIVATE
-    # test_main.cpp
-    # test_algorithm.cpp
-)
-target_link_libraries(Test PRIVATE 
-    Algorithm 
-    DataBase 
-    InOut
+target_sources(TestModule
+    PRIVATE
+        test_parser.cpp
+        test_database.cpp
 )
 
-# Автоматическое копирование папки с тестовыми данными (Data) в папку сборки к бинарнику тестов
-add_custom_command(
-    TARGET Test POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/Data"
-    "$<TARGET_FILE_DIR:TestModule>/Data"
-    COMMENT "Копирование тестовых данных в директорию сборки..."
+# Передаем абсолютный путь к папке Data в C++ код тестов
+target_compile_definitions(TestModule
+    PRIVATE
+        TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/Data"
 )
+
+target_link_libraries(TestModule
+    PRIVATE
+        DataBase
+        InOut
+        GTest::gtest_main
+        nlohmann_json::nlohmann_json
+)
+
+include(GoogleTest)
+gtest_discover_tests(TestModule)
