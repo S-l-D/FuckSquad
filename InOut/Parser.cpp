@@ -295,16 +295,19 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
     db.id_to_name = std::move(sorted_names);
   }
 
-  // 7. Чтение секции "nets", формирование пар <ID связанной ячейки, weight *
-  // 10> и немедленное устранение нетов (в DataBase вектор нетов не хранится).
+  // 7. Чтение секции "nets" с сохранением индекса сети (number_net)
   if (j.contains("nets") && j["nets"].is_array()) {
     const size_t total_cells = db.cells.size();
+    
+    // Вектор списков смежности. Каждый список хранит NeighborLink
     std::vector<std::vector<NeighborLink>> temp_adj(total_cells);
 
+    int32_t current_net_id = 0; // Начинаем нумерацию сетей
+
     for (const auto &j_net : j["nets"]) {
+      // Имя сети, сгенерированное скриптом (например, "N_G134")[cite: 5]
       const std::string net_name = j_net.at("net_id").get<std::string>();
       const double raw_weight = j_net.value("weight", 1.0);
-      // Умножаем входной вес на 10 и записываем в int32_t
       const int32_t scaled_weight =
           static_cast<int32_t>(std::llround(raw_weight * WEIGHT_SCALE));
 
@@ -314,6 +317,7 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
                                  "' must be an array.");
       }
 
+      // Собираем все индексы ячеек (и падов), подключенных к текущей цепи
       std::vector<int32_t> net_cids;
       net_cids.reserve(j_net_cells.size());
       for (const auto &cell_name_val : j_net_cells) {
@@ -327,38 +331,48 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
         net_cids.push_back(cid);
       }
 
-      // Формируем парные связи с чистым весом цепи без деления
+      // Очистка от случайных повторений одного и того же пина внутри одной цепи
+      std::sort(net_cids.begin(), net_cids.end());
+      net_cids.erase(std::unique(net_cids.begin(), net_cids.end()), net_cids.end());
+
+      // Строим полный граф связей (клику) ДЛЯ ТЕКУЩЕЙ ЦЕПИ.
+      // ВАЖНО: передаем current_net_id, а не 0!
       const size_t k = net_cids.size();
       for (size_t u_idx = 0; u_idx < k; ++u_idx) {
         const int32_t u = net_cids[u_idx];
         for (size_t v_idx = u_idx + 1; v_idx < k; ++v_idx) {
           const int32_t v = net_cids[v_idx];
-          if (u == v) {
-            continue;
-          }
-          temp_adj[static_cast<size_t>(u)].push_back({v, 0, scaled_weight});
-          temp_adj[static_cast<size_t>(v)].push_back({u, 0, scaled_weight});
+          temp_adj[static_cast<size_t>(u)].push_back({v, current_net_id, scaled_weight});
+          temp_adj[static_cast<size_t>(v)].push_back({u, current_net_id, scaled_weight});
         }
       }
+
+      current_net_id++; // Увеличиваем номер сети для следующей итерации
     }
 
-    // Укладываем связи в 16-байтовый CompactVec каждой ячейки (сортируя по ID и
-    // суммируя кратные связи)
+    // Укладываем связи в CompactVec каждой ячейки
     for (size_t i = 0; i < total_cells; ++i) {
       auto &links = temp_adj[i];
       if (links.empty()) {
         continue;
       }
 
+      // СОРТИРОВКА: сначала группируем по номеру сети, затем по ID ячейки.
+      // Это критически важно для работы алгоритма CalculateHPWL.
       std::sort(links.begin(), links.end(),
                 [](const NeighborLink &a, const NeighborLink &b) {
+                  if (a.number_net != b.number_net) {
+                      return a.number_net < b.number_net;
+                  }
                   return a.ID_cell < b.ID_cell;
                 });
 
+      // Удаление дубликатов ТОЛЬКО если совпадают И ячейка, И сеть
       size_t unique_cnt = 0;
       for (size_t j_idx = 0; j_idx < links.size(); ++j_idx) {
         if (unique_cnt > 0 &&
-            links[unique_cnt - 1].ID_cell == links[j_idx].ID_cell) {
+            links[unique_cnt - 1].ID_cell == links[j_idx].ID_cell &&
+            links[unique_cnt - 1].number_net == links[j_idx].number_net) { // Проверка сети!
           links[unique_cnt - 1].weight += links[j_idx].weight;
         } else {
           links[unique_cnt++] = links[j_idx];
@@ -366,13 +380,13 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
       }
       links.resize(unique_cnt);
 
+      // Запись в базу данных
       db.cells[i].neighbors.reserve(static_cast<uint32_t>(links.size()));
       for (const auto &link : links) {
         db.cells[i].neighbors.push_back(link);
       }
     }
   }
-
   // 8. Инициализация свободных интервалов в строках и вырезание IP-блоков
   // (blockages)
   db.initRowsAndBlockages();
@@ -438,9 +452,56 @@ void Parser::writeStream(std::ostream &output_stream, const DataBase &db) {
       j_pads.push_back({{"id", cid}, {"x", c.x}, {"y", c.y}});
     }
   }
+  // 1. Вспомогательная структура для сборки гиперсетей из списков смежности
+  struct NetExportData {
+    int32_t weight{0};
+    std::vector<size_t> cell_ids;
+  };
+
+  // Используем map, чтобы сети в JSON шли в аккуратном порядке (N0, N1, N2...)
+  std::map<int32_t, NetExportData> nets_map;
+
+  for (size_t id = 0; id < db.cells.size(); ++id) {
+    const auto &c = db.cells[id];
+    for (size_t i = 0; i < c.neighbors.size(); ++i) {
+      const auto &link = c.neighbors[i];
+      auto &net_data = nets_map[link.number_net];
+      
+      net_data.weight = link.weight;
+      // Добавляем и саму ячейку, и соседа (на случай если граф ориентированный)
+      net_data.cell_ids.push_back(id);
+      net_data.cell_ids.push_back(static_cast<size_t>(link.ID_cell));
+    }
+  }
+
+  // 2. Формирование JSON-массива j_nets
+  nlohmann::json j_nets = nlohmann::json::array(); // Замени тип, если j_nets уже объявлен выше
+
+  for (auto &[net_num, net_data] : nets_map) {
+    // Удаляем дубликаты ID ячеек внутри одной цепи
+    std::sort(net_data.cell_ids.begin(), net_data.cell_ids.end());
+    net_data.cell_ids.erase(
+        std::unique(net_data.cell_ids.begin(), net_data.cell_ids.end()),
+        net_data.cell_ids.end());
+
+    // Переводим числовые индексы обратно в строковые имена ("C_G387", "PAD_IN_1" и т.д.)
+    nlohmann::json cell_names = nlohmann::json::array();
+    for (size_t cid_idx : net_data.cell_ids) {
+      cell_names.push_back(db.id_to_name[cid_idx]);
+    }
+
+    // Если в DataBase есть словарь имен цепей (например, db.net_id_to_name), 
+    // используй его вместо генерации строки "N" + std::to_string(net_num)
+    std::string net_id_str = "N" + std::to_string(net_num);
+
+    j_nets.push_back({{"net_id", net_id_str},
+                      {"cells", std::move(cell_names)},
+                      {"weight", net_data.weight}});
+  }
 
   out["blockages"] = std::move(j_blockages);
   out["cells"] = std::move(j_cells);
+  out["nets"] = std::move(j_nets);
   out["pad_locations"] = std::move(j_pads);
 
   output_stream << out.dump(2) << '\n';
