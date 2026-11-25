@@ -1,6 +1,7 @@
 use crate::model::{Blockage, Cell, Layout, PadLocation};
 use super::SelectedObject;
 use dioxus::prelude::*;
+use dioxus::html::{geometry::WheelDelta, input_data::MouseButton, InteractionLocation, PointerInteraction};
 use std::collections::HashSet;
 
 fn zoom_at_center(
@@ -68,6 +69,9 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
     let mut pan_x = use_signal(|| 0.0_f64);
     let mut pan_y = use_signal(|| 0.0_f64);
     let mut show_grid = use_signal(|| true);
+    let mut drag_start = use_signal(|| None::<(f64, f64, f64, f64)>);
+    let mut dragged = use_signal(|| false);
+    let mut svg_size = use_signal(|| (1.0_f64, 1.0_f64));
 
     let width = layout.design.chip_width;
     let height = layout.design.chip_height;
@@ -115,6 +119,62 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
             div { class: "canvas-frame",
                 svg {
                     class: "chip-svg",
+                    tabindex: "0",
+                    onmounted: move |event| {
+                        spawn(async move {
+                            if let Ok(rect) = event.get_client_rect().await {
+                                svg_size.set((rect.size.width.max(1.0), rect.size.height.max(1.0)));
+                            }
+                        });
+                    },
+                    onmousedown: move |event| {
+                        if event.trigger_button() == Some(MouseButton::Primary) {
+                            let point = event.client_coordinates();
+                            drag_start.set(Some((point.x, point.y, point.x, point.y)));
+                            dragged.set(false);
+                        }
+                    },
+                    onmousemove: move |event| {
+                        if let Some((start_x, start_y, last_x, last_y)) = drag_start() {
+                            let point = event.client_coordinates();
+                            let dx = point.x - last_x;
+                            let dy = point.y - last_y;
+                            if dx.abs() + dy.abs() > 0.0 {
+                                let (pixel_w, pixel_h) = svg_size();
+                                let scale = (pixel_w / (width / zoom())).min(pixel_h / (height / zoom()));
+                                pan_x.set((pan_x() - dx / scale).clamp(0.0, width - width / zoom()));
+                                pan_y.set((pan_y() - dy / scale).clamp(0.0, height - height / zoom()));
+                                drag_start.set(Some((start_x, start_y, point.x, point.y)));
+                                if (point.x - start_x).abs() + (point.y - start_y).abs() > 3.0 { dragged.set(true); }
+                            }
+                        }
+                    },
+                    onmouseup: move |_| drag_start.set(None),
+                    onmouseleave: move |_| drag_start.set(None),
+                    onwheel: move |event| {
+                        event.prevent_default();
+                        let direction = match event.delta() {
+                            WheelDelta::Pixels(delta) => delta.y,
+                            WheelDelta::Lines(delta) => delta.y,
+                            WheelDelta::Pages(delta) => delta.y,
+                        };
+                        if direction != 0.0 {
+                            zoom_at_center(zoom, pan_x, pan_y, if direction < 0.0 { 1.15 } else { 1.0 / 1.15 }, width, height);
+                        }
+                    },
+                    onkeydown: move |event| {
+                        let key = event.key().to_string();
+                        match key.as_str() {
+                            "ArrowLeft" => move_view(pan_x, pan_y, zoom(), width, height, -0.1, 0.0),
+                            "ArrowRight" => move_view(pan_x, pan_y, zoom(), width, height, 0.1, 0.0),
+                            "ArrowUp" => move_view(pan_x, pan_y, zoom(), width, height, 0.0, -0.1),
+                            "ArrowDown" => move_view(pan_x, pan_y, zoom(), width, height, 0.0, 0.1),
+                            "+" | "=" => zoom_at_center(zoom, pan_x, pan_y, 1.5, width, height),
+                            "-" | "_" => zoom_at_center(zoom, pan_x, pan_y, 1.0 / 1.5, width, height),
+                            _ => return,
+                        }
+                        event.prevent_default();
+                    },
                     view_box: "{view_box}",
                     preserve_aspect_ratio: "xMidYMid meet",
                     role: "img",
@@ -154,7 +214,7 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                                 blockage: blockage.clone(),
                                 chip_height: height,
                                 selected: selected_object.as_ref() == Some(&SelectedObject::Blockage(blockage.id.clone())),
-                                on_select,
+                                on_select: move |object| { if !dragged() { on_select.call(object); } },
                             }
                         }
                     }
@@ -165,7 +225,7 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                             chip_height: height,
                             selected: selected_object.as_ref() == Some(&SelectedObject::Cell(cell.id.clone())),
                             related: related.contains(cell.id.as_str()),
-                            on_select,
+                            on_select: move |object| { if !dragged() { on_select.call(object); } },
                         }
                     }
                     for pad in layout.pad_locations.iter().filter(|pad| pad.x.is_finite() && pad.y.is_finite()) {
@@ -175,7 +235,7 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                             chip_height: height,
                             selected: selected_object.as_ref() == Some(&SelectedObject::Pad(pad.id.clone())),
                             related: related.contains(pad.id.as_str()),
-                            on_select,
+                            on_select: move |object| { if !dragged() { on_select.call(object); } },
                         }
                     }
                 }
@@ -185,6 +245,7 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                 span { "Layout: {width} × {height}" }
                 span { "Placed: {placed} / {total}" }
                 span { "Grid: {layout.design.grid_size}" }
+                span { "Drag to pan · Scroll to zoom · Arrow keys to pan · +/− to zoom" }
                 if matches!(selected_object, Some(SelectedObject::Cell(_) | SelectedObject::Pad(_))) {
                     span { "Bright red: selected item · Muted red: items sharing a net" }
                 }
