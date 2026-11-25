@@ -89,14 +89,7 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
     let (fit_zoom, fit_pan_x, fit_pan_y) = fit_placed_cells(&layout);
     let placed = layout.cells.iter().filter(|cell| cell.is_placed()).count();
     let total = layout.cells.len();
-    let related: HashSet<&str> = match &selected_object {
-        Some(SelectedObject::Cell(id) | SelectedObject::Pad(id)) => layout.nets.iter()
-            .filter(|net| net.cells.iter().any(|cell_id| cell_id == id))
-            .flat_map(|net| net.cells.iter().map(String::as_str))
-            .filter(|cell_id| *cell_id != id.as_str())
-            .collect(),
-        _ => HashSet::new(),
-    };
+    let related = related_ids(&layout, selected_object.as_ref());
 
     rsx! {
         section { class: "canvas-column",
@@ -197,6 +190,36 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                 }
             }
         }
+    }
+}
+
+fn related_ids<'a>(layout: &'a Layout, selection: Option<&SelectedObject>) -> HashSet<&'a str> {
+    let id = match selection {
+        Some(SelectedObject::Cell(id) | SelectedObject::Pad(id)) => id.as_str(),
+        _ => return HashSet::new(),
+    };
+    layout.nets.iter()
+        .filter(|net| net.cells.iter().chain(net.pads.iter()).any(|member| member == id))
+        .flat_map(|net| net.cells.iter().chain(net.pads.iter()).map(String::as_str))
+        .filter(|member| *member != id)
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cell_and_pad_connections_work_in_both_directions() {
+        let mut layout: Layout = serde_json::from_str(include_str!("../../examples/layout.json")).unwrap();
+        layout.nets[0].pads.push("PAD_LEFT".into());
+        assert!(related_ids(&layout, Some(&SelectedObject::Pad("PAD_LEFT".into()))).contains("C1"));
+        assert!(related_ids(&layout, Some(&SelectedObject::Cell("C1".into()))).contains("PAD_LEFT"));
+        assert!(!related_ids(&layout, Some(&SelectedObject::Pad("PAD_RIGHT".into()))).contains("C1"));
+
+        layout.nets[0].pads.clear();
+        layout.nets[0].cells.push("PAD_LEFT".into());
+        assert!(related_ids(&layout, Some(&SelectedObject::Pad("PAD_LEFT".into()))).contains("C1"));
     }
 }
 

@@ -72,6 +72,8 @@ pub struct Blockage {
 pub struct Net {
     pub net_id: String,
     pub cells: Vec<String>,
+    #[serde(default)]
+    pub pads: Vec<String>,
     pub weight: f64,
 }
 
