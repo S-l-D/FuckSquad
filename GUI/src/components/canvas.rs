@@ -183,7 +183,7 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                 span { "Placed: {placed} / {total}" }
                 span { "Grid: {layout.design.grid_size}" }
                 if matches!(selected_object, Some(SelectedObject::Cell(_))) {
-                    span { "Solid outline: selected cell · Dashed outline: cells sharing a net" }
+                    span { "Bright red: selected cell · Muted red: cells sharing a net" }
                 }
             }
         }
@@ -197,15 +197,7 @@ fn CellRect(cell: Cell, chip_height: f64, selected: bool, related: bool, on_sele
     let y_svg = chip_height - cell.y.unwrap_or_default() - cell.height;
     let center_x = x + cell.width / 2.0;
     let center_y = y_svg + cell.height / 2.0;
-    let fill = match cell.cell_type.as_str() {
-        "NAND2" => "#38bdf8",
-        "INV" => "#818cf8",
-        "NOR2" => "#34d399",
-        _ => "#60a5fa",
-    };
-    let outline = if selected || related { "#fbbf24" } else { "#091827" };
-    let outline_width = if selected || related { "3" } else { "1" };
-    let dash = if related && !selected { "6 4" } else { "none" };
+    let fill = if selected { "#ff404d" } else if related { "#b85868" } else { "#7475d8" };
     let cell_id = cell.id.clone();
     let label = cell.id.clone();
 
@@ -215,8 +207,7 @@ fn CellRect(cell: Cell, chip_height: f64, selected: bool, related: bool, on_sele
                 x: "{x}", y: "{y_svg}",
                 width: "{cell.width}", height: "{cell.height}",
                 rx: "2",
-                fill: "{fill}", stroke: "{outline}", stroke_width: "{outline_width}",
-                stroke_dasharray: "{dash}",
+                fill: "{fill}", stroke: "#091827", stroke_width: "1",
                 onclick: move |_| on_select.call(SelectedObject::Cell(cell_id.clone())),
             }
             if cell.width >= 20.0 && cell.height >= 15.0 {
@@ -239,7 +230,7 @@ fn BlockageRect(blockage: Blockage, chip_height: f64, selected: bool, on_select:
     let center_y = y + blockage.height / 2.0;
     let font_size = 12.0_f64.min(blockage.height * 0.6)
         .min(blockage.width * 0.8 / (blockage.id.chars().count().max(1) as f64 * 0.7));
-    let outline = if selected { "#fbbf24" } else { "#a3a3a3" };
+    let outline = if selected { "#ff404d" } else { "#a3a3a3" };
     let outline_width = if selected { "3" } else { "1" };
     let id = blockage.id.clone();
     rsx! {
