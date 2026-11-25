@@ -6,4 +6,5 @@ pub mod projects;
 pub enum SelectedObject {
     Cell(String),
     Blockage(String),
+    Pad(String),
 }

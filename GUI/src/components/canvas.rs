@@ -1,4 +1,4 @@
-use crate::model::{Blockage, Cell, Layout};
+use crate::model::{Blockage, Cell, Layout, PadLocation};
 use super::SelectedObject;
 use dioxus::prelude::*;
 use std::collections::HashSet;
@@ -89,8 +89,8 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
     let (fit_zoom, fit_pan_x, fit_pan_y) = fit_placed_cells(&layout);
     let placed = layout.cells.iter().filter(|cell| cell.is_placed()).count();
     let total = layout.cells.len();
-    let related_cells: HashSet<&str> = match &selected_object {
-        Some(SelectedObject::Cell(id)) => layout.nets.iter()
+    let related: HashSet<&str> = match &selected_object {
+        Some(SelectedObject::Cell(id) | SelectedObject::Pad(id)) => layout.nets.iter()
             .filter(|net| net.cells.iter().any(|cell_id| cell_id == id))
             .flat_map(|net| net.cells.iter().map(String::as_str))
             .filter(|cell_id| *cell_id != id.as_str())
@@ -125,7 +125,7 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                     view_box: "{view_box}",
                     preserve_aspect_ratio: "xMidYMid meet",
                     role: "img",
-                    "aria-label": "Cell placement and blockages on the chip",
+                    "aria-label": "Cell placement, pads, and blockages on the chip",
                     defs {
                         pattern {
                             id: "blockage-hatch",
@@ -171,7 +171,17 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                             cell: cell.clone(),
                             chip_height: height,
                             selected: selected_object.as_ref() == Some(&SelectedObject::Cell(cell.id.clone())),
-                            related: related_cells.contains(cell.id.as_str()),
+                            related: related.contains(cell.id.as_str()),
+                            on_select,
+                        }
+                    }
+                    for pad in layout.pad_locations.iter().filter(|pad| pad.x.is_finite() && pad.y.is_finite()) {
+                        PadRect {
+                            key: "{pad.id}",
+                            pad: pad.clone(),
+                            chip_height: height,
+                            selected: selected_object.as_ref() == Some(&SelectedObject::Pad(pad.id.clone())),
+                            related: related.contains(pad.id.as_str()),
                             on_select,
                         }
                     }
@@ -182,9 +192,28 @@ pub fn ChipCanvas(layout: Layout, selected_object: Option<SelectedObject>, on_se
                 span { "Layout: {width} × {height}" }
                 span { "Placed: {placed} / {total}" }
                 span { "Grid: {layout.design.grid_size}" }
-                if matches!(selected_object, Some(SelectedObject::Cell(_))) {
-                    span { "Bright red: selected cell · Muted red: cells sharing a net" }
+                if matches!(selected_object, Some(SelectedObject::Cell(_) | SelectedObject::Pad(_))) {
+                    span { "Bright red: selected item · Muted red: items sharing a net" }
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn PadRect(pad: PadLocation, chip_height: f64, selected: bool, related: bool, on_select: EventHandler<SelectedObject>) -> Element {
+    // Pad locations are points; center a 10×10 square on each point.
+    let x = pad.x - 5.0;
+    let y = chip_height - pad.y - 5.0;
+    let fill = if selected { "#ff404d" } else if related { "#b85868" } else { "#f59e0b" };
+    let id = pad.id.clone();
+    rsx! {
+        g { class: "pad",
+            title { "Pad: {pad.id}" }
+            rect {
+                x: "{x}", y: "{y}", width: "10", height: "10",
+                fill: "{fill}", stroke: "#091827", stroke_width: "1",
+                onclick: move |_| on_select.call(SelectedObject::Pad(id.clone())),
             }
         }
     }
