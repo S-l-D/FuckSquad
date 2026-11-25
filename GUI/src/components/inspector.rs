@@ -1,13 +1,15 @@
-use crate::model::Layout;
-use dioxus::prelude::*;
+use super::canvas::ViewLayout;
 use super::SelectedObject;
+use dioxus::prelude::*;
 
 #[component]
-pub fn Inspector(layout: Layout, selected_object: Option<SelectedObject>) -> Element {
+pub fn Inspector(layout: ViewLayout, selected_object: Option<SelectedObject>) -> Element {
     let selected = match &selected_object {
-        Some(SelectedObject::Cell(id)) => layout.cells.iter().find(|c| &c.id == id),
+        Some(SelectedObject::Cell(id)) => layout.cell(id),
         _ => None,
     };
+    let placed = layout.placed_count();
+    let layout = layout.raw();
     let blockage = match &selected_object {
         Some(SelectedObject::Blockage(id)) => layout.blockages.iter().find(|b| &b.id == id),
         _ => None,
@@ -16,7 +18,6 @@ pub fn Inspector(layout: Layout, selected_object: Option<SelectedObject>) -> Ele
         Some(SelectedObject::Pad(id)) => layout.pad_locations.iter().find(|p| &p.id == id),
         _ => None,
     };
-    let placed = layout.cells.iter().filter(|c| c.is_placed()).count();
     let unplaced = layout.cells.len() - placed;
 
     rsx! {

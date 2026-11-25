@@ -1,13 +1,11 @@
 mod components;
 // mod model;
 
-use components::canvas::ChipCanvas;
-use components::SelectedObject;
+use components::canvas::{ChipCanvas, ViewLayout};
 use components::inspector::Inspector;
 use components::projects::{LayoutSelection, ProjectsPanel};
+use components::SelectedObject;
 use dioxus::prelude::*;
-use tetrislib::dto::model;
-use tetrislib::dto::model::Layout;
 
 fn main() {
     dioxus::launch(App);
@@ -22,9 +20,9 @@ fn App() -> Element {
             Some(selected) => {
                 tetrislib::store::solution_layout(&selected.solution, selected.output)
                     .await
-                    .map(Some)
+                    .map(|layout| Some(ViewLayout::new(layout)))
             }
-            None => Ok::<Option<Layout>, String>(None),
+            None => Ok::<Option<ViewLayout>, String>(None),
         }
     });
     let mut selected_id = use_signal(|| None::<SelectedObject>);
