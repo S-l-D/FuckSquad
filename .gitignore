@@ -1,5 +1,6 @@
 # Артефакты сборки C++ и CMake
 build/
+build-release/
 .cmake/
 CMakeUserPresets.json
 *.user

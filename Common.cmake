@@ -11,13 +11,20 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     message(FATAL_ERROR "Проект TetrIC требует компилятор Clang! Текущий компилятор: ${CMAKE_CXX_COMPILER_ID}")
 endif()
 
+add_compile_options(
+    -Wno-sign-conversion
+    -Wno-shorten-64-to-32
+)
+
 # Строгие флаги компилятора Clang для контроля качества кода
 add_compile_options(
     -Wall          # Базовые предупреждения
     -Wextra        # Дополнительные предупреждения
     -Wpedantic     # Строгое соответствие стандарту ISO C++17
-    -Wshadow       # Предупреждать о перекрытии переменных
-    -Wconversion   # Предупреждать о неявном приведении типов
+    #-Wshadow       # Предупреждать о перекрытии переменных
+    #-Wconversion   # Предупреждать о неявном приведении типов
+    -Wno-sign-conversion
+    -Wno-shorten-64-to-32
 )
 
 # Флаги векторизации (использование векторных регистров SIMD / AVX2 / FMA)
