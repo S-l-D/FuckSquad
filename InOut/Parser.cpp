@@ -296,14 +296,14 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
   }
 
   // 7. Чтение секции "nets" с сохранением индекса сети (number_net)
+  int32_t current_net_id = 0; // Начинаем нумерацию сетей
   if (j.contains("nets") && j["nets"].is_array()) {
     const size_t total_cells = db.cells.size();
     
     // Вектор списков смежности. Каждый список хранит NeighborLink
     std::vector<std::vector<NeighborLink>> temp_adj(total_cells);
 
-    int32_t current_net_id = 0; // Начинаем нумерацию сетей
-
+   
     for (const auto &j_net : j["nets"]) {
       // Имя сети, сгенерированное скриптом (например, "N_G134")[cite: 5]
       const std::string net_name = j_net.at("net_id").get<std::string>();
@@ -349,7 +349,8 @@ void Parser::parseStream(std::istream &input_stream, DataBase &db) {
 
       current_net_id++; // Увеличиваем номер сети для следующей итерации
     }
-
+    db.net_count = current_net_id;
+    
     // Укладываем связи в CompactVec каждой ячейки
     for (size_t i = 0; i < total_cells; ++i) {
       auto &links = temp_adj[i];

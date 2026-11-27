@@ -8,8 +8,7 @@
 
 namespace tetris {
 
-inline int64_t CalculateHPWL(const Cell &cell, int32_t pos_x, int32_t pos_y,
-                             const DataBase &design) {
+inline int64_t CalculateHPWL(const Cell &cell, int32_t pos_x, int32_t pos_y, const DataBase &design) {
   int64_t total_hpwl = 0;
 
   for (size_t i = 0; i < cell.neighbors.size(); ++i) {
@@ -24,13 +23,9 @@ inline int64_t CalculateHPWL(const Cell &cell, int32_t pos_x, int32_t pos_y,
         break;
       }
     }
-    // Внимание: если все неты были свернуты парсером с number_net = 0,
-    // то проверка по number_net пропустит остальных соседей!
-    // Поэтому пропускаем только если number_net != 0:
     if (current_net != 0 && already_processed) {
       continue;
     }
-
     // 2. Инициализируем BBox координатами оцениваемой позиции для текущей
     // ячейки
     int32_t min_x = pos_x;
@@ -59,6 +54,7 @@ inline int64_t CalculateHPWL(const Cell &cell, int32_t pos_x, int32_t pos_y,
         if (cell.neighbors[k].number_net == current_net) {
           const auto &neighbor_cell =
               design.cells[static_cast<size_t>(cell.neighbors[k].ID_cell)];
+
           if (neighbor_cell.is_placed()) {
             min_x = std::min(min_x, neighbor_cell.x);
             max_x = std::max(max_x, neighbor_cell.x);
@@ -66,6 +62,7 @@ inline int64_t CalculateHPWL(const Cell &cell, int32_t pos_x, int32_t pos_y,
             max_y = std::max(max_y, neighbor_cell.y);
             placed_pins_count++;
           }
+          
         }
       }
     }
@@ -111,6 +108,7 @@ inline bool placeFallbackBottomLeft(Cell &cell, std::vector<RowDef> &rows,
 inline bool plasment(DataBase &design) {
   std::vector<RowDef> &rows = design.getRows();
   std::vector<Cell> &cels = design.getCells();
+  std::vector<bool> is_hpwl_net(design.net_count);
   const int32_t sw = std::max<int32_t>(1, design.params.site_width);
 
   for (auto &cell : cels) {
@@ -208,13 +206,14 @@ inline bool plasment(DataBase &design) {
         for (size_t idx = start_idx; idx <= end_idx && !stop_search; ++idx) {
           const auto &interval = current_intervals[idx];
 
-          // Сначала выравниваем левую границу интервала вверх по сетке
-          // site_width
+// 1. Выравниваем левую границу интервала ВПРАВО к сетке
           int32_t min_valid_x = interval.x_start;
-          int32_t rem = min_valid_x % sw;
-          if (rem != 0) {
-            min_valid_x += (sw - rem);
+          int32_t rem_min = min_valid_x % sw;
+          if (rem_min < 0) rem_min += sw;
+          if (rem_min != 0) {
+            min_valid_x += (sw - rem_min);
           }
+          
           int32_t max_valid_x = interval.x_end - cell.width;
 
           // Если интервал слишком узкий для данной ячейки — пропускаем!
@@ -222,23 +221,43 @@ inline bool plasment(DataBase &design) {
             continue;
           }
 
-          // Проецируем x_c в допустимые границы интервала
+          int32_t pos_y = rows[target_row].y;
+
+          // === НОВОЕ: СНАЧАЛА ПРОВЕРЯЕМ ПЛОТНУЮ УПАКОВКУ (ЛЕВЫЙ КРАЙ) ===
+          int64_t hpwl_at_min = CalculateHPWL(cell, min_valid_x, pos_y, design);
+          eval_count++;
+          
+          if (hpwl_at_min < best_hpwl) {
+            best_hpwl = hpwl_at_min;
+            best_x = min_valid_x;
+            best_y = pos_y;
+            best_row_idx = target_row;
+            same_hpwl_count = 1;
+          } else if (hpwl_at_min == best_hpwl) {
+            same_hpwl_count++;
+          }
+          // ==============================================================
+
+          // 2. Проецируем x_c в допустимые границы интервала
           int32_t pos_x = static_cast<int32_t>(
               std::clamp<int64_t>(x_c, min_valid_x, max_valid_x));
 
-          // Выравниваем по сетке кратно site_width
-          pos_x = (pos_x / sw) * sw;
+          // 3. Выравниваем pos_x ВЛЕВО (floor) по сетке
+          int32_t rem_pos = pos_x % sw;
+          if (rem_pos < 0) rem_pos += sw;
+          pos_x -= rem_pos;
+
           if (pos_x < min_valid_x) {
             pos_x = min_valid_x;
           }
 
-          if (pos_x >= interval.x_start &&
-              (pos_x + cell.width) <= interval.x_end) {
-            int32_t pos_y = rows[target_row].y;
-
+          // Если x_c привел нас к точке, отличной от левого края, проверяем и её тоже
+          if (pos_x > min_valid_x && (pos_x + cell.width) <= interval.x_end && !stop_search) {
             int64_t current_hpwl = CalculateHPWL(cell, pos_x, pos_y, design);
             eval_count++;
 
+            // Строгое неравенство (<) гарантирует, что если current_hpwl == hpwl_at_min, 
+            // ячейка останется на min_valid_x (без зазора)
             if (current_hpwl < best_hpwl) {
               best_hpwl = current_hpwl;
               best_x = pos_x;
@@ -248,14 +267,15 @@ inline bool plasment(DataBase &design) {
             } else if (current_hpwl == best_hpwl) {
               same_hpwl_count++;
             }
+          }
 
-            if (same_hpwl_count >= 3 || eval_count >= MAX_EVALS) {
-              stop_search = true;
-            }
+          if (same_hpwl_count >= 3 || eval_count >= MAX_EVALS) {
+            stop_search = true;
+          }
+
           }
         }
       }
-    }
 
     // Фиксация лучшей позиции на кристалле и вырезание занятого интервала в
     // строке

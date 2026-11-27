@@ -257,6 +257,7 @@ struct DesignParams {
   int32_t right_boundary{0};
   int32_t top_boundary{0};
   int32_t bottom_boundary{0};
+
 };
 
 enum class ordering_strategy : int16_t {
@@ -291,6 +292,8 @@ public:
 
   DesignParams design{};
   TetrisParams params{};
+
+  int32_t net_count{0};
 
   /// Плоский вектор объектов ячеек (ID ячейки — её индекс в этом массиве)
   std::vector<Cell> cells;
