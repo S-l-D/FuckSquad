@@ -42,8 +42,8 @@
     {"id":"C13","width":20,"height":40,"type":"INV","priority":1}
   ],
   "nets": [
-    {"net_id":"N1","cells":["C1","C2","C3"],"weight":1.0},
-    {"net_id":"N2","cells":["C3","C4","C5"],"weight":1.5}
+    {"net_id":"N1","cells":["C1","C2","C3"],"pads":["PAD_LEFT"],"weight":1.0},
+    {"net_id":"N2","cells":["C3","C4","C5"],"pads":["PAD_RIGHT"],"weight":1.5}
   ],
   "pad_locations": [
     {"id":"PAD_LEFT","x":0,"y":500},

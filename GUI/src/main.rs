@@ -1,12 +1,11 @@
 mod components;
 // mod model;
 
-use components::canvas::ChipCanvas;
+use components::canvas::{ChipCanvas, ViewLayout};
 use components::inspector::Inspector;
 use components::projects::{LayoutSelection, ProjectsPanel};
+use components::SelectedObject;
 use dioxus::prelude::*;
-use tetrislib::dto::model;
-use tetrislib::dto::model::Layout;
 
 fn main() {
     dioxus::launch(App);
@@ -21,12 +20,12 @@ fn App() -> Element {
             Some(selected) => {
                 tetrislib::store::solution_layout(&selected.solution, selected.output)
                     .await
-                    .map(Some)
+                    .map(|layout| Some(ViewLayout::new(layout)))
             }
-            None => Ok::<Option<Layout>, String>(None),
+            None => Ok::<Option<ViewLayout>, String>(None),
         }
     });
-    let mut selected_id = use_signal(|| None::<String>);
+    let mut selected_id = use_signal(|| None::<SelectedObject>);
 
     let state = layout_resource.cloned();
     let active = selection();
@@ -84,10 +83,10 @@ fn App() -> Element {
                             main { class: "workspace",
                                 ChipCanvas {
                                     layout: layout.clone(),
-                                    selected_id: selected_id(),
+                                    selected_object: selected_id(),
                                     on_select: move |id| selected_id.set(Some(id)),
                                 }
-                                Inspector { layout, selected_id: selected_id() }
+                                Inspector { layout, selected_object: selected_id() }
                             }
                         },
                         Some(Ok(None)) => rsx! {},

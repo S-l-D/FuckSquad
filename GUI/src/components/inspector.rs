@@ -1,12 +1,23 @@
-use crate::model::Layout;
+use super::canvas::ViewLayout;
+use super::SelectedObject;
 use dioxus::prelude::*;
 
 #[component]
-pub fn Inspector(layout: Layout, selected_id: Option<String>) -> Element {
-    let selected = selected_id
-        .as_deref()
-        .and_then(|id| layout.cells.iter().find(|c| c.id == id));
-    let placed = layout.cells.iter().filter(|c| c.is_placed()).count();
+pub fn Inspector(layout: ViewLayout, selected_object: Option<SelectedObject>) -> Element {
+    let selected = match &selected_object {
+        Some(SelectedObject::Cell(id)) => layout.cell(id),
+        _ => None,
+    };
+    let placed = layout.placed_count();
+    let layout = layout.raw();
+    let blockage = match &selected_object {
+        Some(SelectedObject::Blockage(id)) => layout.blockages.iter().find(|b| &b.id == id),
+        _ => None,
+    };
+    let pad = match &selected_object {
+        Some(SelectedObject::Pad(id)) => layout.pad_locations.iter().find(|p| &p.id == id),
+        _ => None,
+    };
     let unplaced = layout.cells.len() - placed;
 
     rsx! {
@@ -20,7 +31,7 @@ pub fn Inspector(layout: Layout, selected_id: Option<String>) -> Element {
                 div { span { "Unplaced cells" } strong { "{unplaced}" } }
             }
             div { class: "panel-divider" }
-            h2 { "Selected cell" }
+            h2 { if blockage.is_some() { "Selected blockage" } else if pad.is_some() { "Selected pad" } else { "Selected cell" } }
             if let Some(cell) = selected {
                 div { class: "selection-name", "{cell.id}" }
                 div { class: "properties",
@@ -31,11 +42,27 @@ pub fn Inspector(layout: Layout, selected_id: Option<String>) -> Element {
                     div { span { "Width" } strong { "{cell.width}" } }
                     div { span { "Height" } strong { "{cell.height}" } }
                 }
+            } else if let Some(blockage) = blockage {
+                div { class: "selection-name", "{blockage.id}" }
+                div { class: "properties",
+                    div { span { "Type" } strong { "Blockage" } }
+                    div { span { "X (from left)" } strong { "{blockage.x}" } }
+                    div { span { "Y (from bottom)" } strong { "{blockage.y}" } }
+                    div { span { "Width" } strong { "{blockage.width}" } }
+                    div { span { "Height" } strong { "{blockage.height}" } }
+                }
+            } else if let Some(pad) = pad {
+                div { class: "selection-name", "{pad.id}" }
+                div { class: "properties",
+                    div { span { "Type" } strong { "Pad" } }
+                    div { span { "X (from left)" } strong { "{pad.x}" } }
+                    div { span { "Y (from bottom)" } strong { "{pad.y}" } }
+                }
             } else {
-                p { class: "muted", "Click a cell in the layout to inspect its properties." }
+                p { class: "muted", "Click a cell, pad, or blockage in the layout to inspect its properties." }
             }
             div { class: "panel-divider" }
-            p { class: "muted", "Rows, blockages, nets, and pad locations are loaded from JSON but are not displayed yet." }
+            p { class: "muted", "Pads are orange; blockages have diagonal grey hatching. Rows and nets are loaded from JSON but are not displayed yet." }
         }
     }
 }
