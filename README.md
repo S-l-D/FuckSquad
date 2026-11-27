@@ -16,6 +16,7 @@
 В проекте иерархический CMakeLists, находится в стадии активной разработки. Полноценная версия в будущих коммитах
 ## На данный момент есть список таргетов:
 - собрать нинзя - ```cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug```
+```cmake -B build-release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++```
 - **build_debug** сборка проекта в режиме DEBUG 
     Запуск: ```cmake --build build --target build_debug```
 - **build_release** сборка проекта в режиме RELEASE
